@@ -83,42 +83,42 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
       </div>
 
       {/* Input Method Toggle */}
-      <div className="flex space-x-3 mb-8">
-        <button
-          onClick={() => setInputMethod('paste')}
-          className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 ${
-            inputMethod === 'paste'
-              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30 shadow-lg'
-              : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
-          }`}
-        >
-          <Clipboard className="w-5 h-5" />
-          <span className="font-medium">Paste Sequence</span>
-        </button>
-        <button
-          onClick={() => setInputMethod('upload')}
-          className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 ${
-            inputMethod === 'upload'
-              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30 shadow-lg'
-              : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
-          }`}
-        >
-          <Upload className="w-5 h-5" />
-          <span className="font-medium">Upload FASTA</span>
-        </button>
+      <div className="flex space-x-2 mb-4">
         <button
           onClick={() => {
             setInputMethod('search')
             setShowSearch(true)
           }}
-          className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 ${
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
             inputMethod === 'search'
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 shadow-lg'
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30'
               : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
           }`}
         >
-          <Search className="w-5 h-5" />
-          <span className="font-medium">Search NCBI</span>
+          <Search className="w-4 h-4" />
+          <span>Search NCBI</span>
+        </button>
+        <button
+          onClick={() => setInputMethod('paste')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+            inputMethod === 'paste'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
+              : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
+          }`}
+        >
+          <Clipboard className="w-4 h-4" />
+          <span>Paste Sequence</span>
+        </button>
+        <button
+          onClick={() => setInputMethod('upload')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+            inputMethod === 'upload'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
+              : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
+          }`}
+        >
+          <Upload className="w-4 h-4" />
+          <span>Upload FASTA</span>
         </button>
       </div>
 
