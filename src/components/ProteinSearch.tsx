@@ -146,36 +146,7 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
             </button>
           </div>
 
-          {/* Example Proteins */}
-          <div>
-            <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span>Popular Proteins</span>
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              {exampleProteins.map((protein) => (
-                <motion.button
-                  key={protein.name}
-                  onClick={() => handleExampleSearch(protein)}
-                  disabled={isFetching}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="group p-5 bg-gradient-to-br from-slate-800/60 to-slate-700/40 hover:from-slate-700/60 hover:to-slate-600/40 border border-slate-600/40 hover:border-slate-500/60 rounded-2xl transition-all duration-300 text-left shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <h4 className="text-sm font-semibold text-slate-100 group-hover:text-white transition-colors mb-2">
-                    {protein.name}
-                  </h4>
-                  <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors leading-relaxed">
-                    {protein.description}
-                  </p>
-                  <div className="mt-3 flex items-center text-xs text-blue-400 group-hover:text-blue-300 transition-colors">
-                    <Download className="w-3 h-3 mr-1" />
-                    <span>Import sequence</span>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
-          </div>          {/* Error Message */}
+          {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -186,7 +157,7 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
             </motion.div>
           )}
 
-          {/* Search Results */}
+          {/* Search Results - Show first when available */}
           {searchResults.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center space-x-2">
@@ -245,6 +216,37 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
               </div>
             </div>
           )}
+
+          {/* Popular Proteins - Show when no search results or as suggestions after results */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <span>{searchResults.length > 0 ? 'Popular Suggestions' : 'Popular Proteins'}</span>
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {exampleProteins.map((protein) => (
+                <motion.button
+                  key={protein.name}
+                  onClick={() => handleExampleSearch(protein)}
+                  disabled={isFetching}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group p-5 bg-gradient-to-br from-slate-800/60 to-slate-700/40 hover:from-slate-700/60 hover:to-slate-600/40 border border-slate-600/40 hover:border-slate-500/60 rounded-2xl transition-all duration-300 text-left shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <h4 className="text-sm font-semibold text-slate-100 group-hover:text-white transition-colors mb-2">
+                    {protein.name}
+                  </h4>
+                  <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors leading-relaxed">
+                    {protein.description}
+                  </p>
+                  <div className="mt-3 flex items-center text-xs text-blue-400 group-hover:text-blue-300 transition-colors">
+                    <Download className="w-3 h-3 mr-1" />
+                    <span>Import sequence</span>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </div>
 
           {/* Error Display */}
           {error && (
