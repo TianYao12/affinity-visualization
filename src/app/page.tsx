@@ -228,7 +228,7 @@ export default function Home() {
         >
           <div className="relative">
             {/* Pipeline Background */}
-            <div className="absolute inset-0 bg-slate-800/20 rounded-2xl backdrop-blur-sm border border-slate-700/20"></div>
+            <div className="absolute inset-0 bg-slate-800/40 rounded-2xl backdrop-blur-sm border border-slate-600/40"></div>
             
             {/* Pipeline Steps */}
             <div className="relative flex justify-center items-center space-x-12 py-8 px-8">
@@ -244,14 +244,16 @@ export default function Home() {
                     : 'bg-slate-800/20 border border-slate-600/30'
                 }`}>
                   <Microscope className={`w-8 h-8 relative z-10 transition-colors duration-300 ${
-                    proteinSequence ? 'text-emerald-300' : 'text-slate-500'
+                    proteinSequence ? 'text-emerald-300' : 'text-slate-400'
                   }`} />
                 </div>
                 <div className="text-center">
                   <div className={`font-medium transition-colors duration-300 ${
-                    proteinSequence ? 'text-slate-200' : 'text-slate-500'
+                    proteinSequence ? 'text-white' : 'text-slate-400'
                   }`}>Protein Input</div>
-                  <div className="text-xs text-slate-500 mt-1">ESM-2 Embedding</div>
+                  <div className={`text-xs mt-1 transition-colors duration-300 ${
+                    proteinSequence ? 'text-slate-300' : 'text-slate-500'
+                  }`}>ESM-2 Embedding</div>
                 </div>
               </motion.div>
 
@@ -260,8 +262,8 @@ export default function Home() {
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 className="flex items-center space-x-2"
               >
-                <ArrowRight className="w-5 h-5 text-slate-400/60" />
-                <div className="w-8 h-px bg-slate-500/40"></div>
+                <ArrowRight className="w-5 h-5 text-slate-300/80" />
+                <div className="w-8 h-px bg-slate-400/60"></div>
               </motion.div>
 
               <motion.div
@@ -278,14 +280,16 @@ export default function Home() {
                     : 'bg-slate-800/20 border border-slate-600/30'
                 }`}>
                   <Activity className={`w-8 h-8 relative z-10 transition-colors duration-300 ${
-                    isAnalyzing ? 'text-amber-300' : analysisComplete ? 'text-blue-300' : 'text-slate-500'
+                    isAnalyzing ? 'text-amber-300' : analysisComplete ? 'text-blue-300' : 'text-slate-400'
                   }`} />
                 </div>
                 <div className="text-center">
                   <div className={`font-medium transition-colors duration-300 ${
-                    isAnalyzing ? 'text-amber-300' : analysisComplete ? 'text-slate-200' : 'text-slate-500'
+                    isAnalyzing ? 'text-amber-300' : analysisComplete ? 'text-white' : 'text-slate-400'
                   }`}>ML Analysis</div>
-                  <div className="text-xs text-slate-500 mt-1">GNN + ChemGAN</div>
+                  <div className={`text-xs mt-1 transition-colors duration-300 ${
+                    isAnalyzing ? 'text-amber-200' : analysisComplete ? 'text-slate-300' : 'text-slate-500'
+                  }`}>GNN + ChemGAN</div>
                 </div>
               </motion.div>
 
@@ -294,8 +298,8 @@ export default function Home() {
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                 className="flex items-center space-x-2"
               >
-                <ArrowRight className="w-5 h-5 text-slate-400/60" />
-                <div className="w-8 h-px bg-slate-500/40"></div>
+                <ArrowRight className="w-5 h-5 text-slate-300/80" />
+                <div className="w-8 h-px bg-slate-400/60"></div>
               </motion.div>
 
               <motion.div
@@ -310,14 +314,16 @@ export default function Home() {
                     : 'bg-slate-800/20 border border-slate-600/30'
                 }`}>
                   <Zap className={`w-8 h-8 relative z-10 transition-colors duration-300 ${
-                    analysisComplete ? 'text-emerald-300' : 'text-slate-500'
+                    analysisComplete ? 'text-emerald-300' : 'text-slate-400'
                   }`} />
                 </div>
                 <div className="text-center">
                   <div className={`font-medium transition-colors duration-300 ${
-                    analysisComplete ? 'text-slate-200' : 'text-slate-500'
+                    analysisComplete ? 'text-white' : 'text-slate-400'
                   }`}>Results</div>
-                  <div className="text-xs text-slate-500 mt-1">pKd Predictions</div>
+                  <div className={`text-xs mt-1 transition-colors duration-300 ${
+                    analysisComplete ? 'text-slate-300' : 'text-slate-500'
+                  }`}>pKd Predictions</div>
                 </div>
               </motion.div>
             </div>

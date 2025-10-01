@@ -79,7 +79,7 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
@@ -87,20 +87,20 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 20, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl border border-slate-600/50 rounded-3xl max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-2xl ring-1 ring-blue-500/10"
+        className="bg-gradient-to-br from-slate-900/98 via-slate-800/98 to-slate-900/98 backdrop-blur-xl border-2 border-slate-500/60 rounded-3xl max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-2xl ring-2 ring-blue-500/20"
       >
         {/* Header */}
-        <div className="relative p-6 border-b border-slate-700/30 bg-gradient-to-r from-blue-950/20 via-indigo-950/10 to-purple-950/20">
+        <div className="relative p-8 border-b-2 border-slate-600/50 bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-purple-950/40">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl border border-blue-500/30 shadow-lg">
-                <Database className="w-6 h-6 text-blue-400" />
+            <div className="flex items-center space-x-5">
+              <div className="p-4 bg-gradient-to-br from-blue-500/30 to-indigo-500/30 rounded-2xl border-2 border-blue-400/40 shadow-xl">
+                <Database className="w-8 h-8 text-blue-300" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold text-white tracking-tight drop-shadow-lg">
                   NCBI Protein Database
                 </h2>
-                <p className="text-slate-400 mt-1 text-sm">Search and import protein sequences from NCBI</p>
+                <p className="text-slate-300 mt-2 text-base font-medium">Search and import protein sequences from NCBI</p>
               </div>
             </div>
             <button
@@ -114,28 +114,28 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
 
         <div className="p-8 space-y-8 overflow-y-auto max-h-[calc(85vh-160px)]">
           {/* Search Bar */}
-          <div className="relative">
+          <div className="relative bg-gradient-to-br from-slate-800/40 to-slate-700/30 p-6 rounded-3xl border border-slate-600/40">
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-blue-400" />
+              <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-slate-300 transition-colors group-focus-within:text-blue-300" />
               <input
                 type="text"
                 placeholder="Search proteins (e.g., 'human insulin', 'SARS-CoV-2 spike', accession number)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
-                className="w-full pl-12 pr-4 py-4 bg-gradient-to-r from-slate-800/80 to-slate-700/80 border border-slate-600/50 rounded-2xl text-slate-200 placeholder-slate-500 focus:border-blue-400/70 focus:outline-none focus:ring-2 focus:ring-blue-400/30 transition-all duration-300 text-lg shadow-inner"
+                className="w-full pl-14 pr-6 py-5 bg-gradient-to-r from-slate-900/90 to-slate-800/90 border-2 border-slate-500/60 rounded-2xl text-white placeholder-slate-400 focus:border-blue-400/80 focus:outline-none focus:ring-3 focus:ring-blue-400/40 transition-all duration-300 text-xl font-medium shadow-lg"
                 disabled={isSearching || isFetching}
               />
               {isSearching && (
-                <div className="absolute right-3 top-3">
-                  <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                <div className="absolute right-4 top-4">
+                  <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
                 </div>
               )}
             </div>
             <button
               onClick={() => handleSearch(searchQuery)}
               disabled={!searchQuery.trim() || isSearching || isFetching}
-              className="mt-4 px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-slate-600 disabled:to-slate-700 disabled:text-slate-400 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-blue-500/25 hover:scale-105 disabled:hover:scale-100 flex items-center space-x-2"
+              className="mt-5 w-full px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-slate-700 disabled:to-slate-800 disabled:text-slate-500 text-white rounded-2xl font-bold transition-all duration-300 shadow-xl hover:shadow-blue-500/30 hover:scale-102 disabled:hover:scale-100 flex items-center justify-center space-x-3 text-lg"
             >
               {isSearching ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -159,19 +159,19 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
 
           {/* Search Results - Show first when available */}
           {searchResults.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center space-x-2">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                <span>Search Results ({searchResults.length})</span>
+            <div className="bg-gradient-to-br from-emerald-900/20 to-green-900/10 p-6 rounded-3xl border-2 border-emerald-600/40">
+              <h3 className="text-xl font-bold text-white mb-8 flex items-center space-x-3">
+                <div className="w-3 h-3 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full shadow-lg"></div>
+                <span className="drop-shadow-sm">Search Results ({searchResults.length})</span>
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {searchResults.map((protein, index) => (
                   <motion.div
                     key={protein.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group p-6 bg-gradient-to-br from-slate-800/50 to-slate-700/30 border border-slate-600/40 hover:border-slate-500/60 rounded-2xl transition-all duration-300 hover:shadow-xl"
+                    className="group p-7 bg-gradient-to-br from-slate-800/70 to-slate-700/50 border-2 border-slate-600/50 hover:border-slate-500/70 rounded-2xl transition-all duration-300 hover:shadow-2xl"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0 space-y-3">
@@ -196,7 +196,7 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
                       <button
                         onClick={() => handleSelectProtein(protein)}
                         disabled={isFetching}
-                        className="ml-6 flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 hover:from-blue-500/40 hover:to-indigo-500/40 text-blue-300 hover:text-blue-200 rounded-xl transition-all duration-300 font-medium border border-blue-500/30 hover:border-blue-400/50 disabled:opacity-50 hover:scale-105 disabled:hover:scale-100"
+                        className="ml-8 flex items-center space-x-3 px-6 py-4 bg-gradient-to-r from-emerald-600/40 to-green-600/40 hover:from-emerald-500/50 hover:to-green-500/50 text-emerald-200 hover:text-white rounded-2xl transition-all duration-300 font-bold border-2 border-emerald-500/40 hover:border-emerald-400/60 disabled:opacity-50 hover:scale-105 disabled:hover:scale-100 shadow-lg text-base"
                       >
                         {isFetching && selectedProteinId === protein.id ? (
                           <>
@@ -218,29 +218,29 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
           )}
 
           {/* Popular Proteins - Show when no search results or as suggestions after results */}
-          <div>
-            <h3 className="text-lg font-semibold text-slate-200 mb-6 flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span>{searchResults.length > 0 ? 'Popular Suggestions' : 'Popular Proteins'}</span>
+          <div className="bg-gradient-to-br from-slate-800/30 to-slate-700/20 p-6 rounded-3xl border border-slate-600/30">
+            <h3 className="text-xl font-bold text-white mb-8 flex items-center space-x-3">
+              <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full shadow-lg"></div>
+              <span className="drop-shadow-sm">{searchResults.length > 0 ? 'Popular Suggestions' : 'Popular Proteins'}</span>
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               {exampleProteins.map((protein) => (
                 <motion.button
                   key={protein.name}
                   onClick={() => handleExampleSearch(protein)}
                   disabled={isFetching}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="group p-5 bg-gradient-to-br from-slate-800/60 to-slate-700/40 hover:from-slate-700/60 hover:to-slate-600/40 border border-slate-600/40 hover:border-slate-500/60 rounded-2xl transition-all duration-300 text-left shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="group p-6 bg-gradient-to-br from-slate-800/80 to-slate-700/60 hover:from-slate-700/80 hover:to-slate-600/60 border-2 border-slate-600/50 hover:border-slate-500/70 rounded-2xl transition-all duration-300 text-left shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <h4 className="text-sm font-semibold text-slate-100 group-hover:text-white transition-colors mb-2">
+                  <h4 className="text-base font-bold text-slate-100 group-hover:text-white transition-colors mb-3">
                     {protein.name}
                   </h4>
-                  <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors leading-relaxed">
+                  <p className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors leading-relaxed mb-4">
                     {protein.description}
                   </p>
-                  <div className="mt-3 flex items-center text-xs text-blue-400 group-hover:text-blue-300 transition-colors">
-                    <Download className="w-3 h-3 mr-1" />
+                  <div className="flex items-center text-sm text-blue-400 group-hover:text-blue-300 transition-colors font-medium">
+                    <Download className="w-4 h-4 mr-2" />
                     <span>Import sequence</span>
                   </div>
                 </motion.button>
@@ -253,9 +253,9 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-red-900/30 border border-red-700/50 rounded-xl"
+              className="p-6 bg-red-900/50 border-2 border-red-600/60 rounded-2xl shadow-xl"
             >
-              <p className="text-red-300 text-sm font-medium">Error: {error}</p>
+              <p className="text-red-200 text-lg font-semibold">⚠️ Error: {error}</p>
             </motion.div>
           )}
 
