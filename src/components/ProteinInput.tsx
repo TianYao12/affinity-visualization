@@ -83,42 +83,42 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
       </div>
 
       {/* Input Method Toggle */}
-      <div className="flex space-x-2 mb-4">
+      <div className="flex space-x-3 mb-8">
         <button
           onClick={() => setInputMethod('paste')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+          className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 ${
             inputMethod === 'paste'
-              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30 shadow-lg'
               : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
           }`}
         >
-          <Clipboard className="w-4 h-4" />
-          <span>Paste Sequence</span>
+          <Clipboard className="w-5 h-5" />
+          <span className="font-medium">Paste Sequence</span>
         </button>
         <button
           onClick={() => setInputMethod('upload')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+          className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 ${
             inputMethod === 'upload'
-              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30 shadow-lg'
               : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
           }`}
         >
-          <Upload className="w-4 h-4" />
-          <span>Upload FASTA</span>
+          <Upload className="w-5 h-5" />
+          <span className="font-medium">Upload FASTA</span>
         </button>
         <button
           onClick={() => {
             setInputMethod('search')
             setShowSearch(true)
           }}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+          className={`flex items-center space-x-3 px-6 py-4 rounded-2xl transition-all duration-300 ${
             inputMethod === 'search'
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30'
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 shadow-lg'
               : 'bg-gray-700/30 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30'
           }`}
         >
-          <Search className="w-4 h-4" />
-          <span>Search NCBI</span>
+          <Search className="w-5 h-5" />
+          <span className="font-medium">Search NCBI</span>
         </button>
       </div>
 
@@ -135,22 +135,24 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {inputMethod === 'paste' ? (
-          <div>
-            <label htmlFor="sequence" className="block text-sm font-medium text-gray-300 mb-2">
-              Protein Sequence (FASTA format)
-            </label>
-            <textarea
-              id="sequence"
-              value={sequence}
-              onChange={(e) => setSequence(e.target.value)}
-              placeholder="Enter protein sequence here... (e.g., MALKWVQRLLVS...)"
-              className="w-full h-32 px-4 py-3 bg-black/20 border border-gray-600/30 rounded-xl text-white placeholder-gray-500 focus:border-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-400/20 transition-all resize-none font-mono text-sm"
-              disabled={isAnalyzing}
-            />
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="sequence" className="block text-lg font-semibold text-gray-300 mb-3">
+                Protein Sequence (FASTA format)
+              </label>
+              <textarea
+                id="sequence"
+                value={sequence}
+                onChange={(e) => setSequence(e.target.value)}
+                placeholder="Enter protein sequence here... (e.g., MALKWVQRLLVS...)"
+                className="w-full h-40 px-6 py-4 bg-black/20 border border-gray-600/30 rounded-2xl text-white placeholder-gray-500 focus:border-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-400/20 transition-all resize-none font-mono text-base"
+                disabled={isAnalyzing}
+              />
+            </div>
             
             {/* Binding Pocket Input */}
-            <div className="mt-4">
-              <label htmlFor="binding-pocket" className="block text-sm font-medium text-gray-300 mb-2">
+            <div>
+              <label htmlFor="binding-pocket" className="block text-lg font-semibold text-gray-300 mb-3">
                 Binding Pocket Sequence (Optional - for targeted prediction)
               </label>
               <textarea
@@ -158,18 +160,18 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
                 value={bindingPocket}
                 onChange={(e) => setBindingPocket(e.target.value)}
                 placeholder="Enter binding site residues... (e.g., specific pocket sequence for enhanced accuracy)"
-                className="w-full h-20 px-4 py-3 bg-black/20 border border-gray-600/30 rounded-xl text-white placeholder-gray-500 focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all resize-none font-mono text-sm"
+                className="w-full h-28 px-6 py-4 bg-black/20 border border-gray-600/30 rounded-2xl text-white placeholder-gray-500 focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all resize-none font-mono text-base"
                 disabled={isAnalyzing}
               />
             </div>
           </div>
         ) : (
-          <div className="border-2 border-dashed border-gray-600/30 rounded-xl p-8 text-center">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-400 mb-2">Drop your FASTA file here or click to browse</p>
+          <div className="border-2 border-dashed border-gray-600/30 rounded-3xl p-16 text-center">
+            <Upload className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+            <p className="text-gray-400 mb-6 text-lg">Drop your FASTA file here or click to browse</p>
             <button
               type="button"
-              className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-all"
+              className="px-8 py-4 bg-blue-600/20 text-blue-400 rounded-2xl border border-blue-400/30 hover:bg-blue-600/30 transition-colors font-semibold text-lg"
             >
               Select File
             </button>
@@ -177,9 +179,9 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
         )}
 
         {/* Sample Proteins */}
-        <div>
-          <p className="text-sm text-gray-400 mb-2">Try sample proteins:</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-4">
+          <p className="text-lg font-medium text-gray-400">Try sample proteins:</p>
+          <div className="flex flex-wrap gap-3">
             {sampleProteins.map((protein, index) => (
               <button
                 key={index}
@@ -188,7 +190,7 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
                   setSequence(protein.sequence)
                   setBindingPocket(protein.pocket)
                 }}
-                className="px-3 py-1 text-xs bg-purple-500/20 text-purple-400 rounded-full hover:bg-purple-500/30 transition-all"
+                className="px-5 py-3 text-sm bg-purple-500/20 text-purple-400 rounded-2xl hover:bg-purple-500/30 transition-all border border-purple-400/30 font-medium"
                 disabled={isAnalyzing}
               >
                 {protein.name}
@@ -200,11 +202,11 @@ export default function ProteinInput({ onAnalyze, isAnalyzing }: ProteinInputPro
         <button
           type="submit"
           disabled={!sequence.trim() || isAnalyzing}
-          className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-500 disabled:hover:to-purple-600"
+          className="w-full flex items-center justify-center space-x-3 px-8 py-5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-500 disabled:hover:to-purple-600 text-lg font-semibold shadow-lg hover:shadow-xl"
         >
           {isAnalyzing ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-6 h-6 animate-spin" />
               <span>Analyzing Protein...</span>
             </>
           ) : (

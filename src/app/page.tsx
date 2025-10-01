@@ -338,58 +338,67 @@ export default function Home() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Left Column - Input and Pipeline */}
-          <div className="space-y-8">
+        {/* Dynamic Layout - Full width input, then 3-column when analysis starts */}
+        {!proteinSequence && !isAnalyzing ? (
+          // Full width protein input when no analysis is running
+          <div className="w-full">
             <ProteinInput onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
-            
-            {(proteinSequence || isAnalyzing) && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <AnalysisPipeline currentStep={currentStep} />
-              </motion.div>
-            )}
           </div>
+        ) : (
+          // 3-column layout when analysis is running or complete
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Left Column - Input and Pipeline */}
+            <div className="space-y-8">
+              <ProteinInput onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+              
+              {(proteinSequence || isAnalyzing) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <AnalysisPipeline currentStep={currentStep} />
+                </motion.div>
+              )}
+            </div>
 
-          {/* Middle Column - Drug Candidates */}
-          <div className="space-y-8">
-            {analysisComplete && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6 }}
-              >
-                <DrugCandidates candidates={drugCandidates} />
-              </motion.div>
-            )}
-          </div>
+            {/* Middle Column - Drug Candidates */}
+            <div className="space-y-8">
+              {analysisComplete && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <DrugCandidates candidates={drugCandidates} />
+                </motion.div>
+              )}
+            </div>
 
-          {/* Right Column - Visualizations */}
-          <div className="space-y-8">
-            {proteinSequence && (
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <MolecularViewer protein={proteinSequence} bindingPocket={bindingPocket} />
-              </motion.div>
-            )}
-            
-            {analysisComplete && (
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-              >
-                <AffinityVisualization candidates={drugCandidates} />
-              </motion.div>
-            )}
+            {/* Right Column - Visualizations */}
+            <div className="space-y-8">
+              {proteinSequence && (
+                <motion.div
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <MolecularViewer protein={proteinSequence} bindingPocket={bindingPocket} />
+                </motion.div>
+              )}
+              
+              {analysisComplete && (
+                <motion.div
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  <AffinityVisualization candidates={drugCandidates} />
+                </motion.div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </main>
   )
