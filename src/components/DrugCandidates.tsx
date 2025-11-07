@@ -1,40 +1,47 @@
-'use client'
+"use client";
 
-import { motion } from 'framer-motion'
-import { Beaker, Zap, Target, TrendingUp, Award, ChevronRight } from 'lucide-react'
+import { motion } from "framer-motion";
+import {
+  Beaker,
+  Zap,
+  Target,
+  TrendingUp,
+  Award,
+  ChevronRight,
+} from "lucide-react";
 
 interface DrugCandidate {
-  id: number
-  name: string
-  smiles: string
-  structure: string
-  pKd: number
-  rmse: number
-  r_squared: number
-  confidence: number
-  molecular_weight: number
-  logP: number
-  interactions: string[]
-  dataset_source: string
-  binding_site: string
+  id: number;
+  name: string;
+  smiles: string;
+  structure: string;
+  pKd: number;
+  rmse: number;
+  r_squared: number;
+  confidence: number;
+  molecular_weight: number;
+  logP: number;
+  interactions: string[];
+  dataset_source: string;
+  binding_site: string;
 }
 
 interface DrugCandidatesProps {
-  candidates: DrugCandidate[]
+  candidates: DrugCandidate[];
 }
 
 export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
   const getAffinityColor = (pKd: number) => {
-    if (pKd >= 8) return 'from-green-400 to-emerald-500'
-    if (pKd >= 6) return 'from-yellow-400 to-orange-500'
-    return 'from-red-400 to-pink-500'
-  }
+    if (pKd >= 8) return "from-green-400 to-emerald-500";
+    if (pKd >= 6) return "from-yellow-400 to-orange-500";
+    return "from-red-400 to-pink-500";
+  };
 
   const getAffinityLabel = (pKd: number) => {
-    if (pKd >= 8) return 'High'
-    if (pKd >= 6) return 'Medium'
-    return 'Low'
-  }
+    if (pKd >= 8) return "High";
+    if (pKd >= 6) return "Medium";
+    return "Low";
+  };
 
   return (
     <motion.div
@@ -49,7 +56,9 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
         </div>
         <div>
           <h2 className="text-xl font-semibold text-white">Drug Candidates</h2>
-          <p className="text-sm text-gray-400">AI-predicted molecular compounds with binding affinity scores</p>
+          <p className="text-sm text-gray-400">
+            AI-predicted molecular compounds with binding affinity scores
+          </p>
         </div>
       </div>
 
@@ -70,14 +79,24 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
                   </h3>
                   <div className="flex items-center space-x-1">
                     <Award className="w-4 h-4 text-yellow-400" />
-                    <span className="text-sm text-yellow-400">#{index + 1}</span>
+                    <span className="text-sm text-yellow-400">
+                      #{index + 1}
+                    </span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-400 font-mono mb-1">{candidate.structure}</p>
-                <p className="text-xs text-gray-500 font-mono mb-2 break-all">{candidate.smiles}</p>
+                <p className="text-sm text-gray-400 font-mono mb-1">
+                  {candidate.structure}
+                </p>
+                <p className="text-xs text-gray-500 font-mono mb-2 break-all">
+                  {candidate.smiles}
+                </p>
                 <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">{candidate.dataset_source}</span>
-                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{candidate.binding_site}</span>
+                  <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
+                    {candidate.dataset_source}
+                  </span>
+                  <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
+                    {candidate.binding_site}
+                  </span>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-purple-400 transition-colors" />
@@ -86,8 +105,14 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
             {/* pKd Score */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">Binding Affinity (pKd)</span>
-                <span className={`text-sm font-semibold bg-gradient-to-r ${getAffinityColor(candidate.pKd)} bg-clip-text text-transparent`}>
+                <span className="text-sm text-gray-400">
+                  Binding Affinity (pKd)
+                </span>
+                <span
+                  className={`text-sm font-semibold bg-gradient-to-r ${getAffinityColor(
+                    candidate.pKd
+                  )} bg-clip-text text-transparent`}
+                >
                   {getAffinityLabel(candidate.pKd)} ({candidate.pKd.toFixed(1)})
                 </span>
               </div>
@@ -96,7 +121,9 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
                   initial={{ width: 0 }}
                   animate={{ width: `${(candidate.pKd / 10) * 100}%` }}
                   transition={{ duration: 1, delay: index * 0.1 }}
-                  className={`h-full bg-gradient-to-r ${getAffinityColor(candidate.pKd)} rounded-full`}
+                  className={`h-full bg-gradient-to-r ${getAffinityColor(
+                    candidate.pKd
+                  )} rounded-full`}
                 />
               </div>
             </div>
@@ -107,14 +134,18 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
                 <Zap className="w-4 h-4 text-blue-400" />
                 <div>
                   <p className="text-xs text-gray-400">RMSE</p>
-                  <p className="text-sm font-semibold text-blue-400">{candidate.rmse.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-blue-400">
+                    {candidate.rmse.toFixed(2)}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-4 h-4 text-green-400" />
                 <div>
                   <p className="text-xs text-gray-400">R² Score</p>
-                  <p className="text-sm font-semibold text-green-400">{candidate.r_squared.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-green-400">
+                    {candidate.r_squared.toFixed(2)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -123,15 +154,21 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
             <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
               <div className="bg-gray-800/30 rounded-lg p-2 text-center">
                 <p className="text-gray-400">MW</p>
-                <p className="text-white font-semibold">{candidate.molecular_weight.toFixed(1)}</p>
+                <p className="text-white font-semibold">
+                  {candidate.molecular_weight.toFixed(1)}
+                </p>
               </div>
               <div className="bg-gray-800/30 rounded-lg p-2 text-center">
                 <p className="text-gray-400">LogP</p>
-                <p className="text-white font-semibold">{candidate.logP.toFixed(1)}</p>
+                <p className="text-white font-semibold">
+                  {candidate.logP.toFixed(1)}
+                </p>
               </div>
               <div className="bg-gray-800/30 rounded-lg p-2 text-center">
                 <p className="text-gray-400">Conf.</p>
-                <p className="text-white font-semibold">{candidate.confidence}%</p>
+                <p className="text-white font-semibold">
+                  {candidate.confidence}%
+                </p>
               </div>
             </div>
 
@@ -157,7 +194,9 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
             <div className="mt-4 pt-4 border-t border-gray-700/30">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-gray-500">Model Confidence</span>
-                <span className="text-xs text-gray-400">{candidate.confidence}%</span>
+                <span className="text-xs text-gray-400">
+                  {candidate.confidence}%
+                </span>
               </div>
               <div className="h-1 bg-gray-700/50 rounded-full overflow-hidden">
                 <motion.div
@@ -176,9 +215,11 @@ export default function DrugCandidates({ candidates }: DrugCandidatesProps) {
         <div className="text-center py-12">
           <Beaker className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-400">No drug candidates generated yet.</p>
-          <p className="text-sm text-gray-500">Run protein analysis to see predictions.</p>
+          <p className="text-sm text-gray-500">
+            Run protein analysis to see predictions.
+          </p>
         </div>
       )}
     </motion.div>
-  )
+  );
 }

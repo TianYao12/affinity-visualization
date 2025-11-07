@@ -1,78 +1,96 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Download, Loader2, Database, X, CheckCircle } from 'lucide-react'
-import { searchProteins, fetchProteinSequence, getExampleProteins, type ProteinSearchResult, type ProteinSequence } from '@/lib/ncbi'
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  Download,
+  Loader2,
+  Database,
+  X,
+  CheckCircle,
+} from "lucide-react";
+import {
+  searchProteins,
+  fetchProteinSequence,
+  getExampleProteins,
+  type ProteinSearchResult,
+  type ProteinSequence,
+} from "@/lib/ncbi";
 
 interface ProteinSearchProps {
-  onSelectProtein: (sequence: string, title: string, accession: string) => void
-  onClose: () => void
+  onSelectProtein: (sequence: string, title: string, accession: string) => void;
+  onClose: () => void;
 }
 
-export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearchProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<ProteinSearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [isFetching, setIsFetching] = useState(false)
-  const [selectedProteinId, setSelectedProteinId] = useState<string>('')
-  const [error, setError] = useState<string>('')
+export default function ProteinSearch({
+  onSelectProtein,
+  onClose,
+}: ProteinSearchProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ProteinSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [selectedProteinId, setSelectedProteinId] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
-  const exampleProteins = getExampleProteins()
+  const exampleProteins = getExampleProteins();
 
   const handleSearch = async (query: string) => {
-    if (!query.trim()) return
+    if (!query.trim()) return;
 
-    setIsSearching(true)
-    setError('')
-    setSearchResults([])
+    setIsSearching(true);
+    setError("");
+    setSearchResults([]);
 
     try {
-      const results = await searchProteins(query, 15)
-      setSearchResults(results)
-      
+      const results = await searchProteins(query, 15);
+      setSearchResults(results);
+
       if (results.length === 0) {
-        setError('No proteins found for this search term')
+        setError("No proteins found for this search term");
       }
     } catch (err) {
-      setError('Search failed. Please check your internet connection and try again.')
-      console.error('Search error:', err)
+      setError(
+        "Search failed. Please check your internet connection and try again."
+      );
+      console.error("Search error:", err);
     } finally {
-      setIsSearching(false)
+      setIsSearching(false);
     }
-  }
+  };
 
   const handleSelectProtein = async (protein: ProteinSearchResult) => {
-    setIsFetching(true)
-    setSelectedProteinId(protein.id)
-    setError('')
+    setIsFetching(true);
+    setSelectedProteinId(protein.id);
+    setError("");
 
     try {
-      const fullProtein = await fetchProteinSequence(protein.id)
-      
+      const fullProtein = await fetchProteinSequence(protein.id);
+
       if (fullProtein && fullProtein.sequence) {
         onSelectProtein(
-          fullProtein.sequence, 
-          fullProtein.title, 
+          fullProtein.sequence,
+          fullProtein.title,
           fullProtein.accession
-        )
-        onClose()
+        );
+        onClose();
       } else {
-        setError('Failed to fetch protein sequence')
+        setError("Failed to fetch protein sequence");
       }
     } catch (err) {
-      setError('Failed to fetch protein sequence. Please try again.')
-      console.error('Fetch error:', err)
+      setError("Failed to fetch protein sequence. Please try again.");
+      console.error("Fetch error:", err);
     } finally {
-      setIsFetching(false)
-      setSelectedProteinId('')
+      setIsFetching(false);
+      setSelectedProteinId("");
     }
-  }
+  };
 
-  const handleExampleSearch = (example: typeof exampleProteins[0]) => {
-    setSearchQuery(example.query)
-    handleSearch(example.query)
-  }
+  const handleExampleSearch = (example: (typeof exampleProteins)[0]) => {
+    setSearchQuery(example.query);
+    handleSearch(example.query);
+  };
 
   return (
     <motion.div
@@ -100,7 +118,9 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
                 <h2 className="text-3xl font-bold text-white tracking-tight drop-shadow-lg">
                   NCBI Protein Database
                 </h2>
-                <p className="text-slate-300 mt-2 text-base font-medium">Search and import protein sequences from NCBI</p>
+                <p className="text-slate-300 mt-2 text-base font-medium">
+                  Search and import protein sequences from NCBI
+                </p>
               </div>
             </div>
             <button
@@ -122,7 +142,9 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
                 placeholder="Search proteins (e.g., 'human insulin', 'SARS-CoV-2 spike', accession number)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+                onKeyPress={(e) =>
+                  e.key === "Enter" && handleSearch(searchQuery)
+                }
                 className="w-full pl-14 pr-6 py-5 bg-gradient-to-r from-slate-900/90 to-slate-800/90 border-2 border-slate-500/60 rounded-2xl text-white placeholder-slate-400 focus:border-blue-400/80 focus:outline-none focus:ring-3 focus:ring-blue-400/40 transition-all duration-300 text-xl font-medium shadow-lg"
                 disabled={isSearching || isFetching}
               />
@@ -142,7 +164,7 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
               ) : (
                 <Search className="w-5 h-5" />
               )}
-              <span>{isSearching ? 'Searching NCBI...' : 'Search NCBI'}</span>
+              <span>{isSearching ? "Searching NCBI..." : "Search NCBI"}</span>
             </button>
           </div>
 
@@ -162,7 +184,9 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
             <div className="bg-gradient-to-br from-emerald-900/20 to-green-900/10 p-6 rounded-3xl border-2 border-emerald-600/40">
               <h3 className="text-xl font-bold text-white mb-8 flex items-center space-x-3">
                 <div className="w-3 h-3 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full shadow-lg"></div>
-                <span className="drop-shadow-sm">Search Results ({searchResults.length})</span>
+                <span className="drop-shadow-sm">
+                  Search Results ({searchResults.length})
+                </span>
               </h3>
               <div className="space-y-5">
                 {searchResults.map((protein, index) => (
@@ -180,15 +204,23 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                           <div className="flex items-center space-x-2 text-slate-400 group-hover:text-slate-300 transition-colors">
-                            <span className="text-blue-400 font-medium">ID:</span>
-                            <span className="font-mono">{protein.accession}</span>
+                            <span className="text-blue-400 font-medium">
+                              ID:
+                            </span>
+                            <span className="font-mono">
+                              {protein.accession}
+                            </span>
                           </div>
                           <div className="flex items-center space-x-2 text-slate-400 group-hover:text-slate-300 transition-colors">
-                            <span className="text-emerald-400 font-medium">Length:</span>
+                            <span className="text-emerald-400 font-medium">
+                              Length:
+                            </span>
                             <span>{protein.length} aa</span>
                           </div>
                           <div className="flex items-center space-x-2 text-slate-400 group-hover:text-slate-300 transition-colors">
-                            <span className="text-purple-400 font-medium">Organism:</span>
+                            <span className="text-purple-400 font-medium">
+                              Organism:
+                            </span>
                             <span className="truncate">{protein.organism}</span>
                           </div>
                         </div>
@@ -221,7 +253,11 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
           <div className="bg-gradient-to-br from-slate-800/30 to-slate-700/20 p-6 rounded-3xl border border-slate-600/30">
             <h3 className="text-xl font-bold text-white mb-8 flex items-center space-x-3">
               <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full shadow-lg"></div>
-              <span className="drop-shadow-sm">{searchResults.length > 0 ? 'Popular Suggestions' : 'Popular Proteins'}</span>
+              <span className="drop-shadow-sm">
+                {searchResults.length > 0
+                  ? "Popular Suggestions"
+                  : "Popular Proteins"}
+              </span>
             </h3>
             <div className="grid grid-cols-2 gap-5">
               {exampleProteins.map((protein) => (
@@ -255,7 +291,9 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
               animate={{ opacity: 1, y: 0 }}
               className="p-6 bg-red-900/50 border-2 border-red-600/60 rounded-2xl shadow-xl"
             >
-              <p className="text-red-200 text-lg font-semibold">⚠️ Error: {error}</p>
+              <p className="text-red-200 text-lg font-semibold">
+                ⚠️ Error: {error}
+              </p>
             </motion.div>
           )}
 
@@ -263,10 +301,10 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
           <div className="pt-6 border-t border-slate-700/30">
             <p className="text-xs text-slate-500 text-center leading-relaxed">
               <Database className="w-3 h-3 inline mr-1" />
-              Data provided by NCBI Protein Database | 
-              <a 
-                href="https://www.ncbi.nlm.nih.gov/protein/" 
-                target="_blank" 
+              Data provided by NCBI Protein Database |
+              <a
+                href="https://www.ncbi.nlm.nih.gov/protein/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 ml-1 transition-colors"
               >
@@ -277,5 +315,5 @@ export default function ProteinSearch({ onSelectProtein, onClose }: ProteinSearc
         </div>
       </motion.div>
     </motion.div>
-  )
+  );
 }
