@@ -20,11 +20,13 @@ import DrugCandidates from "@/components/DrugCandidates";
 import AffinityVisualization from "@/components/AffinityVisualization";
 import MolecularViewer from "@/components/MolecularViewer";
 import AnalysisPipeline from "@/components/AnalysisPipeline";
+import DrugLibraryBrowser from "@/components/DrugLibraryBrowser";
 import type {
   AnalysisJobRequest,
   AnalysisJobResponse,
   AnalysisStage,
   CandidatePrediction,
+  DrugLibrarySelection,
 } from "@/types/prediction";
 
 export default function Home() {
@@ -46,6 +48,24 @@ export default function Home() {
     rmse: 0.69,
     rSquared: 0.5,
   });
+  const [nominatedCompounds, setNominatedCompounds] = useState<
+    DrugLibrarySelection[]
+  >([]);
+
+  const handleNominateCompound = (compound: DrugLibrarySelection) => {
+    setNominatedCompounds((prev) => {
+      if (prev.some((existing) => existing.id === compound.id)) {
+        return prev;
+      }
+      return [...prev, compound];
+    });
+  };
+
+  const handleRemoveNomination = (compoundId: string) => {
+    setNominatedCompounds((prev) =>
+      prev.filter((compound) => compound.id !== compoundId)
+    );
+  };
 
   const mapStatusToStep = (
     status: AnalysisJobResponse["status"]
@@ -73,6 +93,9 @@ export default function Home() {
     const payload: AnalysisJobRequest = {
       sequence: cleanedSequence,
       ...(cleanedPocket ? { bindingPocket: cleanedPocket } : {}),
+      ...(nominatedCompounds.length
+        ? { nominatedCompounds }
+        : {}),
     };
 
     try {
@@ -480,6 +503,12 @@ export default function Home() {
 
             {/* Middle Column - Drug Candidates */}
             <div className="space-y-8">
+              <DrugLibraryBrowser
+                selectedCompounds={nominatedCompounds}
+                onSelectCompound={handleNominateCompound}
+                onRemoveCompound={handleRemoveNomination}
+              />
+
               {(analysisJobId || analysisMessage || analysisError) && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}

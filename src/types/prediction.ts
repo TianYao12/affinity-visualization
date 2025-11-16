@@ -5,6 +5,7 @@ export interface AnalysisJobRequest {
     accession?: string;
     title?: string;
   };
+  nominatedCompounds?: DrugLibrarySelection[];
 }
 
 export type AnalysisStageId =
@@ -28,6 +29,8 @@ export interface CandidatePrediction {
   name: string;
   smiles: string;
   structure: string;
+  sourceCompoundId?: string;
+  source?: string;
   pKd: number;
   rmse: number;
   r_squared: number;
@@ -54,4 +57,23 @@ export interface AnalysisJobResponse {
   createdAt: string;
   completedAt: string;
   error?: string;
+}
+
+export interface DrugLibrarySelection {
+  id: string;
+  sourceCompoundId: string;
+  name: string;
+  smiles: string;
+  source: string;
+  molecularWeight?: number | null;
+  alogp?: number | null;
+  psa?: number | null;
+  hba?: number | null;
+  hbd?: number | null;
+  ro5Violations?: number | null;
+  maxPhase?: number | null;
+  inchikey?: string | null;
+  formula?: string | null;
+  sourceUrl?: string;
+  dataset: string;
 }
