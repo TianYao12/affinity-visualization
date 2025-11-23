@@ -16,14 +16,21 @@ import ProteinSearch from "./ProteinSearch";
 interface ProteinInputProps {
   onAnalyze: (sequence: string, bindingPocket?: string) => void;
   isAnalyzing: boolean;
+  onProteinContextChange?: (context: {
+    name?: string;
+    accession?: string;
+    sequence?: string;
+  }) => void;
 }
 
 export default function ProteinInput({
   onAnalyze,
   isAnalyzing,
+  onProteinContextChange,
 }: ProteinInputProps) {
   const [sequence, setSequence] = useState("");
   const [bindingPocket, setBindingPocket] = useState("");
+  const [proteinNameInput, setProteinNameInput] = useState("");
   const [inputMethod, setInputMethod] = useState<"paste" | "upload" | "search">(
     "paste"
   );
@@ -47,6 +54,12 @@ export default function ProteinInput({
   }) => {
     setSequence(data.sequence);
     setProteinMetadata({ title: data.title, accession: data.accession });
+    setProteinNameInput(data.title);
+    onProteinContextChange?.({
+      name: data.title,
+      accession: data.accession,
+      sequence: data.sequence,
+    });
     setShowSearch(false);
     setValidationErrors([]);
 
@@ -64,6 +77,11 @@ export default function ProteinInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (sequence.trim() && !isAnalyzing) {
+      onProteinContextChange?.({
+        name: proteinNameInput || proteinMetadata?.title,
+        accession: proteinMetadata?.accession,
+        sequence: sequence.trim(),
+      });
       onAnalyze(sequence.trim(), bindingPocket.trim() || undefined);
     }
   };
@@ -170,10 +188,27 @@ export default function ProteinInput({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {inputMethod === "paste" ? (
-          <div className="space-y-6">
-            <div>
-              <label
-                htmlFor="sequence"
+        <div className="space-y-6">
+          <div>
+            <label
+              htmlFor="protein-name"
+              className="block text-lg font-semibold text-gray-300 mb-3"
+            >
+              Protein Name (optional)
+            </label>
+            <input
+              id="protein-name"
+              value={proteinNameInput}
+              onChange={(e) => setProteinNameInput(e.target.value)}
+              placeholder="e.g., SARS-CoV-2 Mpro, EGFR kinase"
+              className="w-full px-4 py-3 bg-black/20 border border-gray-600/30 rounded-2xl text-white placeholder-gray-500 focus:border-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-400/20 transition-all"
+              disabled={isAnalyzing}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="sequence"
                 className="block text-lg font-semibold text-gray-300 mb-3"
               >
                 Protein Sequence (FASTA format)
@@ -234,6 +269,11 @@ export default function ProteinInput({
                 onClick={() => {
                   setSequence(protein.sequence);
                   setBindingPocket(protein.pocket);
+                  setProteinNameInput(protein.name);
+                  onProteinContextChange?.({
+                    name: protein.name,
+                    sequence: protein.sequence,
+                  });
                 }}
                 className="px-5 py-3 text-sm bg-purple-500/20 text-purple-400 rounded-2xl hover:bg-purple-500/30 transition-all border border-purple-400/30 font-medium"
                 disabled={isAnalyzing}

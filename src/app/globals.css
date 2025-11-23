@@ -71,3 +71,15 @@ body {
     left: 100%;
   }
 }
+
+/* Hide Next.js dev toolbar/indicator in development */
+#nextjs-devtools-container,
+#nextjs__container,
+#nextjs__buildIndicator,
+#nextjs-toast,
+div[data-nextjs-dev-overlay-root],
+div[data-nextjs-codeframe-overlay],
+[aria-label="Next.js Devtools"],
+[aria-label="Next.js"] {
+  display: none !important;
+}

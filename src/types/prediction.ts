@@ -5,6 +5,8 @@ export interface AnalysisJobRequest {
     accession?: string;
     title?: string;
   };
+  proteinName?: string;
+  proteinAccession?: string;
   nominatedCompounds?: DrugLibrarySelection[];
 }
 
@@ -76,4 +78,25 @@ export interface DrugLibrarySelection {
   formula?: string | null;
   sourceUrl?: string;
   dataset: string;
+}
+
+export interface BindingPostProcessRequest {
+  sdf: string;
+  bindingAffinity: number;
+  proteinName: string;
+  proteinAccession?: string;
+  candidateName?: string;
+}
+
+export interface BindingPostProcessResult {
+  drugName: string | null;
+  proteinName: string;
+  bindingAffinity: number;
+  prompt: string;
+  gptMessages: Array<{
+    role: "system" | "user";
+    content: string;
+  }>;
+  ncbiSource: "live" | "mock" | "not_provided";
+  notes?: string;
 }

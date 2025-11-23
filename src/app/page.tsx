@@ -21,17 +21,21 @@ import AffinityVisualization from "@/components/AffinityVisualization";
 import MolecularViewer from "@/components/MolecularViewer";
 import AnalysisPipeline from "@/components/AnalysisPipeline";
 import DrugLibraryBrowser from "@/components/DrugLibraryBrowser";
+import BindingReport from "@/components/BindingReport";
 import type {
   AnalysisJobRequest,
   AnalysisJobResponse,
   AnalysisStage,
   CandidatePrediction,
   DrugLibrarySelection,
+  BindingPostProcessResult,
 } from "@/types/prediction";
 
 export default function Home() {
   const [proteinSequence, setProteinSequence] = useState("");
   const [bindingPocket, setBindingPocket] = useState("");
+  const [proteinName, setProteinName] = useState("Custom Protein");
+  const [proteinAccession, setProteinAccession] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [drugCandidates, setDrugCandidates] = useState<CandidatePrediction[]>(
@@ -51,6 +55,11 @@ export default function Home() {
   const [nominatedCompounds, setNominatedCompounds] = useState<
     DrugLibrarySelection[]
   >([]);
+  const [sdfContent, setSdfContent] = useState("");
+  const [bindingReport, setBindingReport] =
+    useState<BindingPostProcessResult | null>(null);
+  const [isPostprocessing, setIsPostprocessing] = useState(false);
+  const [postprocessError, setPostprocessError] = useState<string | null>(null);
 
   const handleNominateCompound = (compound: DrugLibrarySelection) => {
     setNominatedCompounds((prev) => {
@@ -81,6 +90,7 @@ export default function Home() {
 
     setProteinSequence(cleanedSequence);
     setBindingPocket(cleanedPocket);
+    setBindingReport(null);
     setIsAnalyzing(true);
     setAnalysisComplete(false);
     setCurrentStep("analysis");
@@ -93,9 +103,9 @@ export default function Home() {
     const payload: AnalysisJobRequest = {
       sequence: cleanedSequence,
       ...(cleanedPocket ? { bindingPocket: cleanedPocket } : {}),
-      ...(nominatedCompounds.length
-        ? { nominatedCompounds }
-        : {}),
+      ...(nominatedCompounds.length ? { nominatedCompounds } : {}),
+      proteinName,
+      ...(proteinAccession ? { proteinAccession } : {}),
     };
 
     try {
@@ -139,7 +149,73 @@ export default function Home() {
       setAnalysisComplete(false);
       setDrugCandidates([]);
     } finally {
-      setIsAnalyzing(false);
+    setIsAnalyzing(false);
+    }
+  };
+
+  const handleProteinContextChange = (context: {
+    name?: string;
+    accession?: string;
+    sequence?: string;
+  }) => {
+    if (context.sequence) {
+      setProteinSequence(context.sequence);
+    }
+    if (context.name) {
+      setProteinName(context.name);
+    }
+    if (context.accession) {
+      setProteinAccession(context.accession);
+    }
+  };
+
+  const handleGenerateBindingReport = async () => {
+    if (!analysisComplete || !drugCandidates.length) {
+      setPostprocessError("Run an analysis with at least one candidate first.");
+      return;
+    }
+    if (!sdfContent.trim()) {
+      setPostprocessError("Paste an SDF to resolve the ligand via NCBI.");
+      return;
+    }
+
+    setIsPostprocessing(true);
+    setPostprocessError(null);
+
+    const topCandidate = drugCandidates[0];
+    const payload = {
+      sdf: sdfContent,
+      bindingAffinity: topCandidate.pKd,
+      proteinName: proteinName || "Custom Protein",
+      proteinAccession: proteinAccession || undefined,
+      candidateName: topCandidate.name,
+    };
+
+    try {
+      const response = await fetch("/api/postprocess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as
+        | BindingPostProcessResult
+        | { error: string };
+
+      if (!response.ok || "error" in data) {
+        throw new Error(
+          "error" in data ? data.error : "Unable to build binding report."
+        );
+      }
+
+      setBindingReport(data);
+    } catch (error) {
+      console.error("postprocess error", error);
+      setPostprocessError(
+        error instanceof Error ? error.message : "Unknown postprocess error."
+      );
+    } finally {
+      setIsPostprocessing(false);
     }
   };
 
@@ -475,7 +551,11 @@ export default function Home() {
         {!proteinSequence && !isAnalyzing ? (
           // Full width protein input when no analysis is running
           <div className="w-full">
-            <ProteinInput onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+            <ProteinInput
+              onAnalyze={handleAnalyze}
+              isAnalyzing={isAnalyzing}
+              onProteinContextChange={handleProteinContextChange}
+            />
           </div>
         ) : (
           // 3-column layout when analysis is running or complete
@@ -485,6 +565,7 @@ export default function Home() {
               <ProteinInput
                 onAnalyze={handleAnalyze}
                 isAnalyzing={isAnalyzing}
+                onProteinContextChange={handleProteinContextChange}
               />
 
               {(proteinSequence || isAnalyzing) && (
@@ -561,6 +642,38 @@ export default function Home() {
                   <DrugCandidates candidates={drugCandidates} />
                 </motion.div>
               )}
+
+              {/* SDF input + GPT prompt generator */}
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                      Ligand SDF
+                    </p>
+                    <h3 className="text-lg font-semibold text-white">
+                      Provide SDF for NCBI lookup
+                    </h3>
+                  </div>
+                </div>
+                <textarea
+                  value={sdfContent}
+                  onChange={(e) => setSdfContent(e.target.value)}
+                  placeholder="Paste ligand SDF here to resolve the drug name via NCBI..."
+                  className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-mono text-xs"
+                />
+                {postprocessError && (
+                  <p className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg p-3">
+                    {postprocessError}
+                  </p>
+                )}
+                <BindingReport
+                  report={bindingReport}
+                  onGenerate={handleGenerateBindingReport}
+                  isLoading={isPostprocessing}
+                  disabled={!analysisComplete}
+                  sdfPresent={Boolean(sdfContent.trim())}
+                />
+              </div>
             </div>
 
             {/* Right Column - Visualizations */}
