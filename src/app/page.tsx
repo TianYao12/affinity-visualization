@@ -22,6 +22,7 @@ import MolecularViewer from "@/components/MolecularViewer";
 import AnalysisPipeline from "@/components/AnalysisPipeline";
 import DrugLibraryBrowser from "@/components/DrugLibraryBrowser";
 import BindingReport from "@/components/BindingReport";
+import PdbPreview from "@/components/PdbPreview";
 import type {
   AnalysisJobRequest,
   AnalysisJobResponse,
@@ -60,6 +61,7 @@ export default function Home() {
     useState<BindingPostProcessResult | null>(null);
   const [isPostprocessing, setIsPostprocessing] = useState(false);
   const [postprocessError, setPostprocessError] = useState<string | null>(null);
+  const [pdbContent, setPdbContent] = useState("");
 
   const handleNominateCompound = (compound: DrugLibrarySelection) => {
     setNominatedCompounds((prev) => {
@@ -700,6 +702,26 @@ export default function Home() {
                   <AffinityVisualization candidates={drugCandidates} />
                 </motion.div>
               )}
+
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                      PDB Upload
+                    </p>
+                    <h3 className="text-lg font-semibold text-white">
+                      Paste PDB for 2D projection
+                    </h3>
+                  </div>
+                </div>
+                <textarea
+                  value={pdbContent}
+                  onChange={(e) => setPdbContent(e.target.value)}
+                  placeholder="Paste PDB content here (ATOM/HETATM lines)..."
+                  className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 font-mono text-xs"
+                />
+                <PdbPreview pdb={pdbContent} />
+              </div>
             </div>
           </div>
         )}
