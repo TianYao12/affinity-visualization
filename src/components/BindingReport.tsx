@@ -2,7 +2,14 @@
 
 import { motion } from "framer-motion";
 import type { BindingPostProcessResult } from "@/types/prediction";
-import { Loader2, Wand2, BookOpenText, Beaker } from "lucide-react";
+import {
+  Loader2,
+  Wand2,
+  BookOpenText,
+  Beaker,
+  Bot,
+  AlertTriangle,
+} from "lucide-react";
 
 interface BindingReportProps {
   report: BindingPostProcessResult | null;
@@ -108,6 +115,27 @@ export default function BindingReport({
           When ready, this panel will build a GPT prompt that combines your
           protein, predicted affinity, and NCBI-derived ligand name.
         </p>
+      )}
+
+      {report?.llmOutput && (
+        <div className="bg-black/30 border border-white/10 rounded-xl p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-indigo-100">
+            <Bot className="w-4 h-4" />
+            <span>
+              LLM Output ({report.llmModel || "openai"} · {report.llmSource})
+            </span>
+          </div>
+          <pre className="text-xs text-indigo-50 whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
+            {report.llmOutput}
+          </pre>
+        </div>
+      )}
+
+      {!report?.llmOutput && report?.llmError && (
+        <div className="flex items-center gap-2 text-sm text-amber-200 bg-amber-500/10 border border-amber-500/40 rounded-lg p-3">
+          <AlertTriangle className="w-4 h-4" />
+          <span>{report.llmError}</span>
+        </div>
       )}
     </div>
   );

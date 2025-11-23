@@ -99,4 +99,8 @@ export interface BindingPostProcessResult {
   }>;
   ncbiSource: "live" | "mock" | "not_provided";
   notes?: string;
+  llmOutput?: string | null;
+  llmModel?: string;
+  llmSource: "openai" | "mock" | "not_provided";
+  llmError?: string;
 }
