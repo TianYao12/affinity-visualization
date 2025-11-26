@@ -69,13 +69,30 @@ export default function ProteinInput({
     return sequence1;
   };
 
-  // --- Identify protein family (simulated or via LLM/NCBI) ---
-  const identifyProtein = async (seq: string) => {
-    setLoadingProteinInfo(true);
-    // Simulate protein identification delay
-    await new Promise((r) => setTimeout(r, 1500));
+  const handlePDBUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    // Simulated protein families - replace with actual NCBI BLAST or LLM call
+    if (!file.name.endsWith(".pdb")) {
+      alert("Please upload a valid .pdb file");
+      return;
+    }
+
+    const seq = await parsePDBSequence(file);
+
+    setSequence(seq);
+    setProteinNameInput(file.name.replace(".pdb", ""));
+    setProteinMetadata({ title: file.name });
+
+    onProteinContextChange?.({
+      name: file.name,
+      sequence: seq,
+    });
+
+    // Identify protein immediately after upload - make sure to await
+    setLoadingProteinInfo(true);
+    await new Promise((r) => setTimeout(r, 1500));
+    
     const proteinFamilies = [
       {
         family: "Serine/Threonine Kinase",
@@ -103,30 +120,6 @@ export default function ProteinInput({
       proteinFamilies[Math.floor(Math.random() * proteinFamilies.length)];
     setProteinInfo(identified);
     setLoadingProteinInfo(false);
-  };
-
-  const handlePDBUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith(".pdb")) {
-      alert("Please upload a valid .pdb file");
-      return;
-    }
-
-    const seq = await parsePDBSequence(file);
-
-    setSequence(seq);
-    setProteinNameInput(file.name.replace(".pdb", ""));
-    setProteinMetadata({ title: file.name });
-
-    onProteinContextChange?.({
-      name: file.name,
-      sequence: seq,
-    });
-
-    // Identify protein immediately after upload
-    await identifyProtein(seq);
 
     // optional auto-pocket extraction
     if (!bindingPocket && seq.length > 100) {
