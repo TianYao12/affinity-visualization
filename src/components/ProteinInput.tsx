@@ -139,11 +139,12 @@ export default function ProteinInput({
     });
 
     // Start workflow
+    const randomDuration = () => Math.random() * 3000 + 3000; // 3-6s per step
     const durations = [
-      Math.random() * 3000 + 3000, // search: 3-6s
-      Math.random() * 3000 + 3000, // validate: 3-6s
-      2000, // ranking: 2s
-      0, // results
+      randomDuration(), // search
+      randomDuration(), // validate
+      randomDuration(), // ranking
+      randomDuration(), // results
     ];
     setWorkflowDurations(durations);
     setWorkflowStep(0);
@@ -152,8 +153,6 @@ export default function ProteinInput({
   };
 
   // Auto-advance workflow steps
-  const [useEffectCalled, setUseEffectCalled] = useState(false);
-  
   useEffect(() => {
     if (workflowStep === -1 || workflowStep >= 4 || workflowDurations.length === 0) return;
 

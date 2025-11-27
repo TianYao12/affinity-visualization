@@ -549,182 +549,178 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Dynamic Layout - Full width input, then 3-column when analysis starts */}
-        {!proteinSequence && !isAnalyzing ? (
-          // Full width protein input when no analysis is running
-          <div className="w-full">
+        {/* Adaptive Layout - keep protein input mounted so workflow printouts persist */}
+        <div
+          className={`grid gap-8 ${
+            proteinSequence || isAnalyzing ? "grid-cols-1 xl:grid-cols-3" : "grid-cols-1"
+          }`}
+        >
+          {/* Left Column - Input and Pipeline */}
+          <div className="space-y-8">
             <ProteinInput
               onAnalyze={handleAnalyze}
               isAnalyzing={isAnalyzing}
               onProteinContextChange={handleProteinContextChange}
             />
+
+            {(proteinSequence || isAnalyzing) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <AnalysisPipeline
+                  currentStep={currentStep}
+                  stages={analysisStages}
+                />
+              </motion.div>
+            )}
           </div>
-        ) : (
-          // 3-column layout when analysis is running or complete
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            {/* Left Column - Input and Pipeline */}
-            <div className="space-y-8">
-              <ProteinInput
-                onAnalyze={handleAnalyze}
-                isAnalyzing={isAnalyzing}
-                onProteinContextChange={handleProteinContextChange}
-              />
 
-              {(proteinSequence || isAnalyzing) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <AnalysisPipeline
-                    currentStep={currentStep}
-                    stages={analysisStages}
-                  />
-                </motion.div>
-              )}
-            </div>
+          {(proteinSequence || isAnalyzing) && (
+            <>
+              {/* Middle Column - Drug Candidates */}
+              <div className="space-y-8">
+                <DrugLibraryBrowser
+                  selectedCompounds={nominatedCompounds}
+                  onSelectCompound={handleNominateCompound}
+                  onRemoveCompound={handleRemoveNomination}
+                />
 
-            {/* Middle Column - Drug Candidates */}
-            <div className="space-y-8">
-              <DrugLibraryBrowser
-                selectedCompounds={nominatedCompounds}
-                onSelectCompound={handleNominateCompound}
-                onRemoveCompound={handleRemoveNomination}
-              />
-
-              {(analysisJobId || analysisMessage || analysisError) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <div
-                    className={`rounded-2xl border p-4 ${
-                      analysisError
-                        ? "border-red-500/40 bg-red-500/10"
-                        : "border-emerald-400/40 bg-emerald-500/10"
-                    }`}
+                {(analysisJobId || analysisMessage || analysisError) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-semibold text-white">
-                        {analysisError ? "Analysis Error" : "Inference Job"}
-                      </p>
-                      {analysisJobId && !analysisError && (
-                        <span className="text-xs text-emerald-100">
-                          {analysisComplete ? "Complete" : "Processing"}
-                        </span>
+                    <div
+                      className={`rounded-2xl border p-4 ${
+                        analysisError
+                          ? "border-red-500/40 bg-red-500/10"
+                          : "border-emerald-400/40 bg-emerald-500/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-white">
+                          {analysisError ? "Analysis Error" : "Inference Job"}
+                        </p>
+                        {analysisJobId && !analysisError && (
+                          <span className="text-xs text-emerald-100">
+                            {analysisComplete ? "Complete" : "Processing"}
+                          </span>
+                        )}
+                      </div>
+                      {analysisError ? (
+                        <p className="text-sm text-red-100">{analysisError}</p>
+                      ) : (
+                        <>
+                          {analysisMessage && (
+                            <p className="text-sm text-emerald-50">
+                              {analysisMessage}
+                            </p>
+                          )}
+                          {analysisJobId && (
+                            <p className="text-xs text-emerald-100/80 font-mono break-all mt-2">
+                              Job ID: {analysisJobId}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
-                    {analysisError ? (
-                      <p className="text-sm text-red-100">{analysisError}</p>
-                    ) : (
-                      <>
-                        {analysisMessage && (
-                          <p className="text-sm text-emerald-50">
-                            {analysisMessage}
-                          </p>
-                        )}
-                        {analysisJobId && (
-                          <p className="text-xs text-emerald-100/80 font-mono break-all mt-2">
-                            Job ID: {analysisJobId}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {analysisComplete && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <DrugCandidates candidates={drugCandidates} />
-                </motion.div>
-              )}
-
-              {/* SDF input + GPT prompt generator */}
-              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                      Ligand SDF
-                    </p>
-                    <h3 className="text-lg font-semibold text-white">
-                      Provide SDF for NCBI lookup
-                    </h3>
-                  </div>
-                </div>
-                <textarea
-                  value={sdfContent}
-                  onChange={(e) => setSdfContent(e.target.value)}
-                  placeholder="Paste ligand SDF here to resolve the drug name via NCBI..."
-                  className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-mono text-xs"
-                />
-                {postprocessError && (
-                  <p className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg p-3">
-                    {postprocessError}
-                  </p>
+                  </motion.div>
                 )}
-                <BindingReport
-                  report={bindingReport}
-                  onGenerate={handleGenerateBindingReport}
-                  isLoading={isPostprocessing}
-                  disabled={!analysisComplete}
-                  sdfPresent={Boolean(sdfContent.trim())}
-                />
-              </div>
-            </div>
 
-            {/* Right Column - Visualizations */}
-            <div className="space-y-8">
-              {proteinSequence && (
-                <motion.div
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <MolecularViewer
-                    protein={proteinSequence}
-                    bindingPocket={bindingPocket}
-                  />
-                </motion.div>
-              )}
+                {analysisComplete && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <DrugCandidates candidates={drugCandidates} />
+                  </motion.div>
+                )}
 
-              {analysisComplete && (
-                <motion.div
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                >
-                  <AffinityVisualization candidates={drugCandidates} />
-                </motion.div>
-              )}
-
-              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                      PDB Upload
-                    </p>
-                    <h3 className="text-lg font-semibold text-white">
-                      Paste PDB for 2D projection
-                    </h3>
+                {/* SDF input + GPT prompt generator */}
+                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                        Ligand SDF
+                      </p>
+                      <h3 className="text-lg font-semibold text-white">
+                        Provide SDF for NCBI lookup
+                      </h3>
+                    </div>
                   </div>
+                  <textarea
+                    value={sdfContent}
+                    onChange={(e) => setSdfContent(e.target.value)}
+                    placeholder="Paste ligand SDF here to resolve the drug name via NCBI..."
+                    className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-mono text-xs"
+                  />
+                  {postprocessError && (
+                    <p className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg p-3">
+                      {postprocessError}
+                    </p>
+                  )}
+                  <BindingReport
+                    report={bindingReport}
+                    onGenerate={handleGenerateBindingReport}
+                    isLoading={isPostprocessing}
+                    disabled={!analysisComplete}
+                    sdfPresent={Boolean(sdfContent.trim())}
+                  />
                 </div>
-                <textarea
-                  value={pdbContent}
-                  onChange={(e) => setPdbContent(e.target.value)}
-                  placeholder="Paste PDB content here (ATOM/HETATM lines)..."
-                  className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 font-mono text-xs"
-                />
-                <PdbPreview pdb={pdbContent} />
               </div>
-            </div>
-          </div>
-        )}
+
+              {/* Right Column - Visualizations */}
+              <div className="space-y-8">
+                {proteinSequence && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <MolecularViewer
+                      protein={proteinSequence}
+                      bindingPocket={bindingPocket}
+                    />
+                  </motion.div>
+                )}
+
+                {analysisComplete && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                  >
+                    <AffinityVisualization candidates={drugCandidates} />
+                  </motion.div>
+                )}
+
+                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                        PDB Upload
+                      </p>
+                      <h3 className="text-lg font-semibold text-white">
+                        Paste PDB for 2D projection
+                      </h3>
+                    </div>
+                  </div>
+                  <textarea
+                    value={pdbContent}
+                    onChange={(e) => setPdbContent(e.target.value)}
+                    placeholder="Paste PDB content here (ATOM/HETATM lines)..."
+                    className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 font-mono text-xs"
+                  />
+                  <PdbPreview pdb={pdbContent} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </main>
   );
