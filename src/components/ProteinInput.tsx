@@ -29,7 +29,10 @@ export default function ProteinInput({
     family: string;
     description: string;
     function: string;
+    accession?: string | null;
+    source?: string;
   } | null>(null);
+  const [proteinInfoError, setProteinInfoError] = useState<string | null>(null);
   const [loadingProteinInfo, setLoadingProteinInfo] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(-1); // -1 = not started
@@ -69,6 +72,76 @@ export default function ProteinInput({
     return sequence1;
   };
 
+  const identifyProtein = async (query: { name?: string; accession?: string }) => {
+    if (!query.name && !query.accession) return;
+
+    setLoadingProteinInfo(true);
+    setProteinInfoError(null);
+
+    try {
+      const response = await fetch("/api/protein-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(query),
+      });
+
+      const data = (await response.json()) as {
+        family?: string;
+        description?: string;
+        function?: string;
+        accession?: string | null;
+        source?: string;
+        error?: string;
+      };
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Unable to identify protein via NCBI");
+      }
+
+      setProteinInfo({
+        family: data.family || "Protein",
+        description: data.description || "NCBI protein record",
+        function: data.function || "Function not provided",
+        accession: data.accession,
+        source: data.source,
+      });
+    } catch (err) {
+      console.error("identifyProtein error", err);
+      setProteinInfoError(
+        err instanceof Error ? err.message : "Unknown NCBI lookup error"
+      );
+
+      // fallback to lightweight mock if NCBI fails
+      const fallback = [
+        {
+          family: "Serine/Threonine Kinase",
+          description: "Kinase superfamily",
+          function: "Phosphorylation & signal transduction",
+        },
+        {
+          family: "Serine Protease",
+          description: "Protease family",
+          function: "Proteolytic cleavage",
+        },
+        {
+          family: "Immunoglobulin Domain",
+          description: "Ig-like fold",
+          function: "Immune recognition & binding",
+        },
+        {
+          family: "G-Protein Coupled Receptor",
+          description: "GPCR superfamily",
+          function: "Signal transduction",
+        },
+      ];
+      const identified =
+        fallback[Math.floor(Math.random() * fallback.length)];
+      setProteinInfo(identified);
+    } finally {
+      setLoadingProteinInfo(false);
+    }
+  };
+
   const handlePDBUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -89,37 +162,8 @@ export default function ProteinInput({
       sequence: seq,
     });
 
-    // Identify protein immediately after upload - make sure to await
-    setLoadingProteinInfo(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    
-    const proteinFamilies = [
-      {
-        family: "Serine/Threonine Kinase",
-        description: "Kinase superfamily",
-        function: "Phosphorylation & signal transduction",
-      },
-      {
-        family: "Serine Protease",
-        description: "Protease family",
-        function: "Proteolytic cleavage",
-      },
-      {
-        family: "Immunoglobulin Domain",
-        description: "Ig-like fold",
-        function: "Immune recognition & binding",
-      },
-      {
-        family: "G-Protein Coupled Receptor",
-        description: "GPCR superfamily",
-        function: "Signal transduction",
-      },
-    ];
-
-    const identified =
-      proteinFamilies[Math.floor(Math.random() * proteinFamilies.length)];
-    setProteinInfo(identified);
-    setLoadingProteinInfo(false);
+    // Identify protein via NCBI (or fallback)
+    await identifyProtein({ name: file.name.replace(".pdb", "") });
 
     // optional auto-pocket extraction
     if (!bindingPocket && seq.length > 100) {
@@ -255,24 +299,48 @@ export default function ProteinInput({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/20 mb-6"
+            className="relative overflow-hidden rounded-2xl mb-6 border border-blue-500/20 bg-gradient-to-r from-blue-900/40 via-indigo-900/40 to-blue-800/30 shadow-[0_20px_60px_-35px_rgba(59,130,246,0.7)]"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-white mb-1">
+            <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.4),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(168,85,247,0.35),transparent_30%)]" />
+            <div className="relative p-6 flex flex-col gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-[11px] uppercase tracking-wide text-blue-100">
+                  Protein Identified
+                </div>
+                <h3 className="text-2xl font-bold text-white leading-tight">
                   {proteinInfo.family}
                 </h3>
-                <p className="text-gray-300 text-sm mb-2">
+                <p className="text-sm text-blue-100/80 leading-relaxed">
                   {proteinInfo.description}
                 </p>
-                <p className="text-gray-400 text-xs">
-                  <span className="text-blue-400 font-semibold">Function:</span>{" "}
-                  {proteinInfo.function}
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200">
+                  <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                    <span className="text-blue-200 font-semibold">Function:</span>{" "}
+                    <span className="text-slate-100">{proteinInfo.function}</span>
+                  </div>
+                  {proteinInfo.accession && (
+                    <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                      <span className="text-blue-200 font-semibold">Accession:</span>{" "}
+                      <span className="text-slate-100">{proteinInfo.accession}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center text-[11px] text-blue-100/70">
+                  <span className="opacity-80">
+                    Source:{" "}
+                    {proteinInfo.source === "ncbi" ? "NCBI E-utilities" : proteinInfo.source}
+                  </span>
+                  {proteinInfoError && (
+                    <span className="text-red-200 ml-2">
+                      (fallback: {proteinInfoError})
+                    </span>
+                  )}
+                </div>
               </div>
+
               <button
                 onClick={() => setShowVisualization(!showVisualization)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-400/30 hover:bg-blue-600/30 transition-colors whitespace-nowrap ml-4"
+                className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-500/15 text-blue-100 rounded-xl border border-blue-300/30 hover:bg-blue-500/25 transition-colors whitespace-nowrap w-full sm:w-auto"
               >
                 <Eye className="w-4 h-4" />
                 <span>Visualize</span>
