@@ -1,726 +1,269 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Atom,
-  Dna,
-  Beaker,
-  Zap,
-  Search,
-  Target,
-  Microscope,
-  Activity,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
-import ProteinInput from "@/components/ProteinInput";
-import DrugCandidates from "@/components/DrugCandidates";
-import AffinityVisualization from "@/components/AffinityVisualization";
-import MolecularViewer from "@/components/MolecularViewer";
-import AnalysisPipeline from "@/components/AnalysisPipeline";
-import DrugLibraryBrowser from "@/components/DrugLibraryBrowser";
-import BindingReport from "@/components/BindingReport";
-import PdbPreview from "@/components/PdbPreview";
-import type {
-  AnalysisJobRequest,
-  AnalysisJobResponse,
-  AnalysisStage,
-  CandidatePrediction,
-  DrugLibrarySelection,
-  BindingPostProcessResult,
-} from "@/types/prediction";
+import { Upload, Database, Beaker, Zap, ArrowRight, FileText } from "lucide-react";
+import DrugScreening from "@/components/DrugScreening";
+import type { ScreeningResult } from "@/types/prediction";
 
 export default function Home() {
-  const [proteinSequence, setProteinSequence] = useState("");
-  const [bindingPocket, setBindingPocket] = useState("");
-  const [proteinName, setProteinName] = useState("Custom Protein");
-  const [proteinAccession, setProteinAccession] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
-  const [drugCandidates, setDrugCandidates] = useState<CandidatePrediction[]>(
-    []
-  );
-  const [currentStep, setCurrentStep] = useState<
-    "input" | "analysis" | "prediction" | "complete"
-  >("input");
-  const [analysisStages, setAnalysisStages] = useState<AnalysisStage[]>([]);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
-  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
-  const [modelMetrics, setModelMetrics] = useState({
-    rmse: 0.69,
-    rSquared: 0.5,
-  });
-  const [nominatedCompounds, setNominatedCompounds] = useState<
-    DrugLibrarySelection[]
-  >([]);
-  const [sdfContent, setSdfContent] = useState("");
-  const [bindingReport, setBindingReport] =
-    useState<BindingPostProcessResult | null>(null);
-  const [isPostprocessing, setIsPostprocessing] = useState(false);
-  const [postprocessError, setPostprocessError] = useState<string | null>(null);
   const [pdbContent, setPdbContent] = useState("");
+  const [pdbFileName, setPdbFileName] = useState<string | null>(null);
+  const [screeningResult, setScreeningResult] = useState<ScreeningResult | null>(null);
 
-  const handleNominateCompound = (compound: DrugLibrarySelection) => {
-    setNominatedCompounds((prev) => {
-      if (prev.some((existing) => existing.id === compound.id)) {
-        return prev;
-      }
-      return [...prev, compound];
-    });
-  };
+  const handlePdbFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleRemoveNomination = (compoundId: string) => {
-    setNominatedCompounds((prev) =>
-      prev.filter((compound) => compound.id !== compoundId)
-    );
-  };
-
-  const mapStatusToStep = (
-    status: AnalysisJobResponse["status"]
-  ): "input" | "analysis" | "prediction" | "complete" => {
-    if (status === "complete") return "complete";
-    if (status === "processing") return "prediction";
-    return "analysis";
-  };
-
-  const handleAnalyze = async (sequence: string, pocket?: string) => {
-    const cleanedSequence = sequence.trim();
-    const cleanedPocket = pocket?.trim() ?? "";
-
-    setProteinSequence(cleanedSequence);
-    setBindingPocket(cleanedPocket);
-    setBindingReport(null);
-    setIsAnalyzing(true);
-    setAnalysisComplete(false);
-    setCurrentStep("analysis");
-    setDrugCandidates([]);
-    setAnalysisStages([]);
-    setAnalysisError(null);
-    setAnalysisMessage(null);
-    setAnalysisJobId(null);
-
-    const payload: AnalysisJobRequest = {
-      sequence: cleanedSequence,
-      ...(cleanedPocket ? { bindingPocket: cleanedPocket } : {}),
-      ...(nominatedCompounds.length ? { nominatedCompounds } : {}),
-      proteinName,
-      ...(proteinAccession ? { proteinAccession } : {}),
-    };
-
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as AnalysisJobResponse;
-
-      if (!response.ok) {
-        throw new Error(data.error || "Analysis request failed.");
-      }
-
-      setAnalysisStages(data.stages || []);
-      setAnalysisMessage(data.message ?? null);
-      setAnalysisJobId(data.jobId);
-      setDrugCandidates(data.candidates || []);
-
-      if (data.metrics) {
-        setModelMetrics((prev) => ({
-          rmse: data.metrics?.rmse ?? prev.rmse,
-          rSquared: data.metrics?.r_squared ?? prev.rSquared,
-        }));
-      }
-
-      const nextStep = mapStatusToStep(data.status);
-      setCurrentStep(nextStep);
-      setAnalysisComplete(data.status === "complete");
-    } catch (error) {
-      console.error("handleAnalyze error", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unexpected error during analysis.";
-      setAnalysisError(message);
-      setCurrentStep("input");
-      setAnalysisComplete(false);
-      setDrugCandidates([]);
-    } finally {
-    setIsAnalyzing(false);
-    }
-  };
-
-  const handleProteinContextChange = (context: {
-    name?: string;
-    accession?: string;
-    sequence?: string;
-  }) => {
-    if (context.sequence) {
-      setProteinSequence(context.sequence);
-    }
-    if (context.name) {
-      setProteinName(context.name);
-    }
-    if (context.accession) {
-      setProteinAccession(context.accession);
-    }
-  };
-
-  const handleGenerateBindingReport = async () => {
-    if (!analysisComplete || !drugCandidates.length) {
-      setPostprocessError("Run an analysis with at least one candidate first.");
-      return;
-    }
-    if (!sdfContent.trim()) {
-      setPostprocessError("Paste an SDF to resolve the ligand via NCBI.");
+    if (!file.name.toLowerCase().endsWith(".pdb")) {
+      alert("Please upload a valid .pdb file");
       return;
     }
 
-    setIsPostprocessing(true);
-    setPostprocessError(null);
-
-    const topCandidate = drugCandidates[0];
-    const payload = {
-      sdf: sdfContent,
-      bindingAffinity: topCandidate.pKd,
-      proteinName: proteinName || "Custom Protein",
-      proteinAccession: proteinAccession || undefined,
-      candidateName: topCandidate.name,
-    };
-
-    try {
-      const response = await fetch("/api/postprocess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = (await response.json()) as
-        | BindingPostProcessResult
-        | { error: string };
-
-      if (!response.ok || "error" in data) {
-        throw new Error(
-          "error" in data ? data.error : "Unable to build binding report."
-        );
-      }
-
-      setBindingReport(data);
-    } catch (error) {
-      console.error("postprocess error", error);
-      setPostprocessError(
-        error instanceof Error ? error.message : "Unknown postprocess error."
-      );
-    } finally {
-      setIsPostprocessing(false);
-    }
+    const text = await file.text();
+    setPdbContent(text);
+    setPdbFileName(file.name);
   };
+
+  const handleScreeningComplete = (result: ScreeningResult) => {
+    setScreeningResult(result);
+  };
+
+  const hasPdb = pdbContent.trim().length > 0;
 
   return (
     <main className="min-h-screen relative overflow-hidden">
-      {/* Background Effects */}
+      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900" />
-      <div className="absolute inset-0 bg-molecular-pattern opacity-20" />
+      <div className="absolute inset-0 opacity-20" style={{
+        backgroundImage: `radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                          radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.1) 0%, transparent 50%)`
+      }} />
 
       <div className="relative z-10 container mx-auto px-6 py-12">
-        {/* Enhanced Header */}
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -50 }}
+          initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
         >
-          {/* Main Title Section */}
-          <div className="relative mb-8">
-            <div className="flex justify-center items-center mb-4">
-              <div className="text-center">
-                <h1 className="text-7xl font-black bg-gradient-to-r from-slate-200 via-blue-200 to-slate-200 bg-clip-text text-transparent mb-4 tracking-tight">
-                  Affi-NN-ity
-                </h1>
-                <p className="text-xl font-medium text-slate-300 tracking-wide">
-                  Protein-Drug Binding Affinity Predictor
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Description Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="max-w-5xl mx-auto mb-8"
-          >
-            <p className="text-xl leading-relaxed text-slate-300 mb-6 font-light">
-              Dual-stream architecture combining{" "}
-              <span className="font-semibold text-blue-300">
-                Graph Neural Networks
-              </span>{" "}
-              for molecules with{" "}
-              <span className="font-semibold text-indigo-300">
-                ESM-2 protein language models
-              </span>
-              . Trained on{" "}
-              <span className="font-semibold text-emerald-300">
-                PDBBind v2019 dataset
-              </span>{" "}
-              with <span className="font-semibold text-amber-300">ChemGAN</span>{" "}
-              molecular generation pipeline.
-            </p>
-          </motion.div>
-
-          {/* Performance Metrics */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex justify-center space-x-8"
-          >
-            <motion.div
-              whileHover={{ scale: 1.02, y: -1 }}
-              className="bg-slate-800/40 backdrop-blur-sm border border-slate-600/30 rounded-xl px-6 py-4 shadow-lg"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                <div>
-                  <div className="text-sm font-medium text-slate-400">
-                    Root Mean Square Error
-                  </div>
-                  <div className="text-lg font-semibold text-slate-200">
-                    RMSE: {modelMetrics.rmse.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.02, y: -1 }}
-              className="bg-slate-800/40 backdrop-blur-sm border border-slate-600/30 rounded-xl px-6 py-4 shadow-lg"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-emerald-300 rounded-full"></div>
-                <div>
-                  <div className="text-sm font-medium text-slate-400">
-                    Coefficient of Determination
-                  </div>
-                  <div className="text-lg font-semibold text-slate-200">
-                    R²: {modelMetrics.rSquared.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.02, y: -1 }}
-              className="bg-slate-800/40 backdrop-blur-sm border border-slate-600/30 rounded-xl px-6 py-4 shadow-lg"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-indigo-300 rounded-full"></div>
-                <div>
-                  <div className="text-sm font-medium text-slate-400">
-                    Training Dataset
-                  </div>
-                  <div className="text-lg font-semibold text-slate-200">
-                    PDBBind v2019
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-
-          {/* Subtitle with University Info */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-            className="mt-6 text-center"
-          >
-            <p className="text-sm text-slate-500 font-medium">
-              University of Waterloo | WAT.ai Research Initiative | Borealis AI
-              Let&apos;s SOLVE It Program
-            </p>
-          </motion.div>
+          <h1 className="text-6xl font-black bg-gradient-to-r from-slate-200 via-blue-200 to-slate-200 bg-clip-text text-transparent mb-4 tracking-tight">
+            Affi-NN-ity
+          </h1>
+          <p className="text-xl font-medium text-slate-300 tracking-wide mb-4">
+            High-Throughput Drug Screening Platform
+          </p>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            Screen up to 200,000 drug candidates from the ZINC database against your protein structure 
+            to identify compounds with strong predicted binding affinity.
+          </p>
         </motion.div>
 
-        <div className="mb-16 flex justify-center">
-          <Link
-            href="/benchmarks"
-            className="inline-flex items-center space-x-2 rounded-full border border-slate-600/60 bg-slate-900/40 px-6 py-3 text-sm font-semibold text-slate-100 shadow-lg shadow-blue-500/10 transition hover:-translate-y-0.5 hover:border-slate-400/80 hover:bg-slate-800/60"
-          >
-            <Target className="w-4 h-4 text-emerald-300" />
-            <span>View Full Benchmark Report</span>
-          </Link>
-        </div>
-
-        {/* Enhanced Analysis Pipeline Visualization */}
+        {/* Pipeline Visualization */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mb-16"
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-12"
         >
-          <div className="relative">
-            {/* Pipeline Background */}
-            <div className="absolute inset-0 bg-slate-800/40 rounded-2xl backdrop-blur-sm border border-slate-600/40"></div>
-
-            {/* Pipeline Steps */}
-            <div className="relative flex justify-center items-center space-x-12 py-8 px-8">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className={`flex flex-col items-center space-y-3 transition-all duration-300 ${
-                  proteinSequence ? "opacity-100" : "opacity-60"
-                }`}
-              >
-                <div
-                  className={`relative p-4 rounded-xl transition-all duration-500 ${
-                    proteinSequence
-                      ? "bg-slate-700/30 border border-emerald-400/30 shadow-lg"
-                      : "bg-slate-800/20 border border-slate-600/30"
-                  }`}
-                >
-                  <Microscope
-                    className={`w-8 h-8 relative z-10 transition-colors duration-300 ${
-                      proteinSequence ? "text-emerald-300" : "text-slate-400"
-                    }`}
-                  />
-                </div>
-                <div className="text-center">
-                  <div
-                    className={`font-medium transition-colors duration-300 ${
-                      proteinSequence ? "text-white" : "text-slate-400"
-                    }`}
-                  >
-                    Protein Input
+          <div className="bg-slate-800/40 backdrop-blur-sm border border-slate-600/40 rounded-2xl p-6">
+            <div className="flex justify-center items-center gap-4 flex-wrap">
+              {/* Step 1: Upload PDB */}
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                hasPdb ? "bg-emerald-500/20 border border-emerald-400/40" : "bg-slate-700/30 border border-slate-600/30"
+              }`}>
+                <Upload className={`w-5 h-5 ${hasPdb ? "text-emerald-400" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <div className={`font-medium ${hasPdb ? "text-emerald-300" : "text-slate-300"}`}>
+                    1. Upload PDB
                   </div>
-                  <div
-                    className={`text-xs mt-1 transition-colors duration-300 ${
-                      proteinSequence ? "text-slate-300" : "text-slate-500"
-                    }`}
-                  >
-                    ESM-2 Embedding
-                  </div>
+                  <div className="text-xs text-slate-500">Protein structure</div>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div
-                animate={{ x: [0, 8, 0] }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="flex items-center space-x-2"
-              >
-                <ArrowRight className="w-5 h-5 text-slate-300/80" />
-                <div className="w-8 h-px bg-slate-400/60"></div>
-              </motion.div>
+              <ArrowRight className="w-4 h-4 text-slate-500" />
 
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className={`flex flex-col items-center space-y-3 transition-all duration-300 ${
-                  isAnalyzing
-                    ? "opacity-100"
-                    : analysisComplete
-                    ? "opacity-100"
-                    : "opacity-60"
-                }`}
-              >
-                <div
-                  className={`relative p-4 rounded-xl transition-all duration-500 ${
-                    isAnalyzing
-                      ? "bg-slate-700/30 border border-amber-400/30 shadow-lg"
-                      : analysisComplete
-                      ? "bg-slate-700/30 border border-blue-400/30 shadow-lg"
-                      : "bg-slate-800/20 border border-slate-600/30"
-                  }`}
-                >
-                  <Activity
-                    className={`w-8 h-8 relative z-10 transition-colors duration-300 ${
-                      isAnalyzing
-                        ? "text-amber-300"
-                        : analysisComplete
-                        ? "text-blue-300"
-                        : "text-slate-400"
-                    }`}
-                  />
-                </div>
-                <div className="text-center">
-                  <div
-                    className={`font-medium transition-colors duration-300 ${
-                      isAnalyzing
-                        ? "text-amber-300"
-                        : analysisComplete
-                        ? "text-white"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    ML Analysis
+              {/* Step 2: Configure Screening */}
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                hasPdb ? "bg-blue-500/20 border border-blue-400/40" : "bg-slate-700/30 border border-slate-600/30"
+              }`}>
+                <Database className={`w-5 h-5 ${hasPdb ? "text-blue-400" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <div className={`font-medium ${hasPdb ? "text-blue-300" : "text-slate-300"}`}>
+                    2. Select Candidates
                   </div>
-                  <div
-                    className={`text-xs mt-1 transition-colors duration-300 ${
-                      isAnalyzing
-                        ? "text-amber-200"
-                        : analysisComplete
-                        ? "text-slate-300"
-                        : "text-slate-500"
-                    }`}
-                  >
-                    GNN + ChemGAN
-                  </div>
+                  <div className="text-xs text-slate-500">50K / 100K / 200K</div>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div
-                animate={{ x: [0, 8, 0] }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 1,
-                }}
-                className="flex items-center space-x-2"
-              >
-                <ArrowRight className="w-5 h-5 text-slate-300/80" />
-                <div className="w-8 h-px bg-slate-400/60"></div>
-              </motion.div>
+              <ArrowRight className="w-4 h-4 text-slate-500" />
 
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className={`flex flex-col items-center space-y-3 transition-all duration-300 ${
-                  analysisComplete ? "opacity-100" : "opacity-60"
-                }`}
-              >
-                <div
-                  className={`relative p-4 rounded-xl transition-all duration-500 ${
-                    analysisComplete
-                      ? "bg-slate-700/30 border border-emerald-400/30 shadow-lg"
-                      : "bg-slate-800/20 border border-slate-600/30"
-                  }`}
-                >
-                  <Zap
-                    className={`w-8 h-8 relative z-10 transition-colors duration-300 ${
-                      analysisComplete ? "text-emerald-300" : "text-slate-400"
-                    }`}
-                  />
-                </div>
-                <div className="text-center">
-                  <div
-                    className={`font-medium transition-colors duration-300 ${
-                      analysisComplete ? "text-white" : "text-slate-400"
-                    }`}
-                  >
-                    Results
+              {/* Step 3: Run Screening */}
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                screeningResult ? "bg-purple-500/20 border border-purple-400/40" : "bg-slate-700/30 border border-slate-600/30"
+              }`}>
+                <Beaker className={`w-5 h-5 ${screeningResult ? "text-purple-400" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <div className={`font-medium ${screeningResult ? "text-purple-300" : "text-slate-300"}`}>
+                    3. Screen Drugs
                   </div>
-                  <div
-                    className={`text-xs mt-1 transition-colors duration-300 ${
-                      analysisComplete ? "text-slate-300" : "text-slate-500"
-                    }`}
-                  >
-                    pKd Predictions
-                  </div>
+                  <div className="text-xs text-slate-500">Binding affinity</div>
                 </div>
-              </motion.div>
-            </div>
+              </div>
 
-            {/* Progress Bar */}
-            <div className="mt-6 mx-8">
-              <div className="h-1 bg-slate-700/30 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-blue-300 to-emerald-300 rounded-full"
-                  initial={{ width: "0%" }}
-                  animate={{
-                    width: proteinSequence
-                      ? isAnalyzing
-                        ? "50%"
-                        : analysisComplete
-                        ? "100%"
-                        : "33%"
-                      : "0%",
-                  }}
-                  transition={{ duration: 0.8, ease: "easeInOut" }}
-                />
+              <ArrowRight className="w-4 h-4 text-slate-500" />
+
+              {/* Step 4: Results */}
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                screeningResult ? "bg-emerald-500/20 border border-emerald-400/40" : "bg-slate-700/30 border border-slate-600/30"
+              }`}>
+                <Zap className={`w-5 h-5 ${screeningResult ? "text-emerald-400" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <div className={`font-medium ${screeningResult ? "text-emerald-300" : "text-slate-300"}`}>
+                    4. Top Candidates
+                  </div>
+                  <div className="text-xs text-slate-500">Ranked by pKd</div>
+                </div>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Adaptive Layout - keep protein input mounted so workflow printouts persist */}
-        <div
-          className={`grid gap-8 ${
-            proteinSequence || isAnalyzing ? "grid-cols-1 xl:grid-cols-3" : "grid-cols-1"
-          }`}
-        >
-          {/* Left Column - Input and Pipeline */}
-          <div className="space-y-8">
-            <ProteinInput
-              onAnalyze={handleAnalyze}
-              isAnalyzing={isAnalyzing}
-              onProteinContextChange={handleProteinContextChange}
-            />
+        {/* Main Content */}
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Left Column - PDB Upload & Visualization */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="space-y-6"
+          >
+            {/* PDB Upload Card */}
+            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-cyan-500/20 rounded-xl">
+                  <FileText className="w-6 h-6 text-cyan-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Protein Structure</h2>
+                  <p className="text-sm text-gray-400">Upload your PDB file to begin screening</p>
+                </div>
+              </div>
 
-            {(proteinSequence || isAnalyzing) && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <AnalysisPipeline
-                  currentStep={currentStep}
-                  stages={analysisStages}
-                />
-              </motion.div>
-            )}
-          </div>
-
-          {(proteinSequence || isAnalyzing) && (
-            <>
-              {/* Middle Column - Drug Candidates */}
-              <div className="space-y-8">
-                <DrugLibraryBrowser
-                  selectedCompounds={nominatedCompounds}
-                  onSelectCompound={handleNominateCompound}
-                  onRemoveCompound={handleRemoveNomination}
-                />
-
-                {(analysisJobId || analysisMessage || analysisError) && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <div
-                      className={`rounded-2xl border p-4 ${
-                        analysisError
-                          ? "border-red-500/40 bg-red-500/10"
-                          : "border-emerald-400/40 bg-emerald-500/10"
-                      }`}
+              {/* File Upload Area */}
+              <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+                hasPdb 
+                  ? "border-emerald-500/50 bg-emerald-500/5" 
+                  : "border-gray-600/50 hover:border-gray-500/50"
+              }`}>
+                {hasPdb ? (
+                  <div className="space-y-3">
+                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                      <FileText className="w-8 h-8 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-emerald-300 font-semibold">{pdbFileName}</p>
+                      <p className="text-sm text-gray-400">
+                        {pdbContent.split("\n").filter(l => l.startsWith("ATOM") || l.startsWith("HETATM")).length} atoms loaded
+                      </p>
+                    </div>
+                    <label
+                      htmlFor="pdb-upload"
+                      className="inline-block px-4 py-2 bg-gray-700/50 text-gray-300 rounded-xl cursor-pointer hover:bg-gray-600/50 transition text-sm"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-white">
-                          {analysisError ? "Analysis Error" : "Inference Job"}
-                        </p>
-                        {analysisJobId && !analysisError && (
-                          <span className="text-xs text-emerald-100">
-                            {analysisComplete ? "Complete" : "Processing"}
-                          </span>
-                        )}
-                      </div>
-                      {analysisError ? (
-                        <p className="text-sm text-red-100">{analysisError}</p>
-                      ) : (
-                        <>
-                          {analysisMessage && (
-                            <p className="text-sm text-emerald-50">
-                              {analysisMessage}
-                            </p>
-                          )}
-                          {analysisJobId && (
-                            <p className="text-xs text-emerald-100/80 font-mono break-all mt-2">
-                              Job ID: {analysisJobId}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-
-                {analysisComplete && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <DrugCandidates candidates={drugCandidates} />
-                  </motion.div>
-                )}
-
-                {/* SDF input + GPT prompt generator */}
-                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                        Ligand SDF
-                      </p>
-                      <h3 className="text-lg font-semibold text-white">
-                        Provide SDF for NCBI lookup
-                      </h3>
-                    </div>
+                      Upload Different File
+                    </label>
                   </div>
-                  <textarea
-                    value={sdfContent}
-                    onChange={(e) => setSdfContent(e.target.value)}
-                    placeholder="Paste ligand SDF here to resolve the drug name via NCBI..."
-                    className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-mono text-xs"
-                  />
-                  {postprocessError && (
-                    <p className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg p-3">
-                      {postprocessError}
-                    </p>
-                  )}
-                  <BindingReport
-                    report={bindingReport}
-                    onGenerate={handleGenerateBindingReport}
-                    isLoading={isPostprocessing}
-                    disabled={!analysisComplete}
-                    sdfPresent={Boolean(sdfContent.trim())}
-                  />
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Upload className="w-12 h-12 text-gray-500 mx-auto" />
+                    <div>
+                      <p className="text-gray-300 font-medium mb-1">Drop your PDB file here</p>
+                      <p className="text-sm text-gray-500">or click to browse</p>
+                    </div>
+                    <label
+                      htmlFor="pdb-upload"
+                      className="inline-block px-6 py-3 bg-cyan-600/20 text-cyan-300 rounded-xl cursor-pointer hover:bg-cyan-600/30 transition font-medium border border-cyan-500/30"
+                    >
+                      Select PDB File
+                    </label>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept=".pdb"
+                  onChange={handlePdbFileUpload}
+                  className="hidden"
+                  id="pdb-upload"
+                />
               </div>
 
-              {/* Right Column - Visualizations */}
-              <div className="space-y-8">
-                {proteinSequence && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <MolecularViewer
-                      protein={proteinSequence}
-                      bindingPocket={bindingPocket}
-                    />
-                  </motion.div>
-                )}
+              {/* Manual PDB Input */}
+              <details className="mt-4">
+                <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300 transition">
+                  Or paste PDB content manually
+                </summary>
+                <textarea
+                  value={pdbContent}
+                  onChange={(e) => {
+                    setPdbContent(e.target.value);
+                    setPdbFileName(null);
+                  }}
+                  placeholder="Paste PDB content here (ATOM/HETATM lines)..."
+                  className="w-full h-32 mt-3 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 font-mono text-xs"
+                />
+              </details>
+            </div>
 
-                {analysisComplete && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                  >
-                    <AffinityVisualization candidates={drugCandidates} />
-                  </motion.div>
-                )}
-
-                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                        PDB Upload
-                      </p>
-                      <h3 className="text-lg font-semibold text-white">
-                        Paste PDB for 2D projection
-                      </h3>
-                    </div>
-                  </div>
-                  <textarea
-                    value={pdbContent}
-                    onChange={(e) => setPdbContent(e.target.value)}
-                    placeholder="Paste PDB content here (ATOM/HETATM lines)..."
-                    className="w-full h-32 px-4 py-3 bg-black/30 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 font-mono text-xs"
-                  />
-                  <PdbPreview pdb={pdbContent} />
+            {/* Dataset Info */}
+            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+              <h3 className="text-lg font-semibold text-white mb-4">ZINC Drug Database</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-black/20 rounded-xl p-3">
+                  <p className="text-gray-400">Total Compounds</p>
+                  <p className="text-2xl font-bold text-blue-300">~227K</p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-3">
+                  <p className="text-gray-400">Ranked By</p>
+                  <p className="text-2xl font-bold text-emerald-300">QED</p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-3">
+                  <p className="text-gray-400">Data Fields</p>
+                  <p className="text-lg font-semibold text-purple-300">SMILES, QED, MW, logP</p>
+                </div>
+                <div className="bg-black/20 rounded-xl p-3">
+                  <p className="text-gray-400">Source</p>
+                  <p className="text-lg font-semibold text-amber-300">Kaggle ZINC</p>
                 </div>
               </div>
-            </>
-          )}
+            </div>
+          </motion.div>
+
+          {/* Right Column - Drug Screening */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <DrugScreening
+              pdbContent={pdbContent}
+              onScreeningComplete={handleScreeningComplete}
+            />
+          </motion.div>
         </div>
+
+        {/* Footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="mt-16 text-center"
+        >
+          <p className="text-sm text-slate-500">
+            University of Waterloo | WAT.ai Research Initiative | Borealis AI Let&apos;s SOLVE It Program
+          </p>
+        </motion.div>
       </div>
     </main>
   );

@@ -1,13 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  devIndicators: {
-    // Hide the default Next.js dev activity logo overlay
-    buildActivity: false,
-    appIsrStatus: false,
-  },
+  // outputFileTracingRoot to silence lockfile warning
+  outputFileTracingRoot: __dirname,
 };
 
 module.exports = nextConfig;
