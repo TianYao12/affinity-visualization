@@ -11,7 +11,7 @@ export interface DrugCandidate {
 }
 
 export interface ScreeningConfig {
-  candidateCount: 50000 | 100000 | 200000;
+  candidateCount: 3 | 50 | 50000 | 100000 | 200000;
   topN: number;
   minBindingAffinity: number;
 }

@@ -11,61 +11,98 @@ interface DrugRow {
 
 let cachedDrugs: DrugRow[] | null = null;
 
+function parseCsv(content: string): string[][] {
+  const rows: string[][] = [];
+  let current = "";
+  const row: string[] = [];
+  let inQuotes = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    const next = content[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        i++;
+      }
+      row.push(current);
+      if (row.length) rows.push([...row]);
+      row.length = 0;
+      current = "";
+    } else if (char === "," && !inQuotes) {
+      row.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  // push final field
+  row.push(current);
+  if (row.length > 1 || row[0]) {
+    rows.push([...row]);
+  }
+
+  return rows;
+}
+
 async function loadDrugsFromCSV(): Promise<DrugRow[]> {
   if (cachedDrugs) {
     return cachedDrugs;
   }
 
-  const csvPath = path.join(process.cwd(), "kaggle_zinc_filtered.csv");
+  const sortedPath = path.join(process.cwd(), "kaggle_zinc_filtered_sorted.csv");
+  const basePath = path.join(process.cwd(), "kaggle_zinc_filtered.csv");
+  const csvPath = await fs
+    .access(sortedPath)
+    .then(() => sortedPath)
+    .catch(() => basePath);
   const content = await fs.readFile(csvPath, "utf-8");
-  const lines = content.split("\n");
 
-  // Skip header
-  const header = lines[0].split(",");
-  const smilesIdx = header.indexOf("smiles");
-  const qedIdx = header.indexOf("qed");
-  const mwIdx = header.indexOf("mw");
-  const logPIdx = header.indexOf("logP");
+  const rows = parseCsv(content);
+  if (!rows.length) {
+    throw new Error("CSV is empty or could not be parsed.");
+  }
+
+  const header = rows[0].map((h) => h.trim());
+  const smilesIdx = header.findIndex((h) => h.toLowerCase() === "smiles");
+  const qedIdx = header.findIndex((h) => h.toLowerCase() === "qed");
+  const mwIdx = header.findIndex((h) => h.toLowerCase() === "mw");
+  const logPIdx = header.findIndex((h) => h.toLowerCase() === "logp");
+
+  if (smilesIdx === -1 || qedIdx === -1) {
+    throw new Error("CSV missing required columns: smiles, qed");
+  }
 
   const drugs: DrugRow[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row.length) continue;
 
-    // Handle quoted CSV fields
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (const char of line) {
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
-        values.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    values.push(current.trim());
-
-    const smiles = values[smilesIdx]?.replace(/[\n\r]/g, "").trim();
-    const qed = parseFloat(values[qedIdx]);
-    const mw = mwIdx >= 0 ? parseFloat(values[mwIdx]) : null;
-    const logP = logPIdx >= 0 ? parseFloat(values[logPIdx]) : null;
+    const smiles = row[smilesIdx]?.replace(/[\n\r]/g, "").trim();
+    const qed = parseFloat(row[qedIdx] ?? "");
+    const mw = mwIdx >= 0 ? parseFloat(row[mwIdx] ?? "") : null;
+    const logP = logPIdx >= 0 ? parseFloat(row[logPIdx] ?? "") : null;
 
     if (smiles && !isNaN(qed)) {
       drugs.push({
         smiles,
         qed,
-        mw: mw && !isNaN(mw) ? mw : null,
-        logP: logP && !isNaN(logP) ? logP : null,
+        mw: mw !== null && !isNaN(mw) ? mw : null,
+        logP: logP !== null && !isNaN(logP) ? logP : null,
       });
     }
   }
 
-  // Sort by QED descending (highest quality first)
+  // Already sorted CSV, but ensure descending order
   drugs.sort((a, b) => b.qed - a.qed);
 
   cachedDrugs = drugs;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Database,
@@ -22,6 +22,8 @@ interface DrugScreeningProps {
 }
 
 const CANDIDATE_OPTIONS = [
+  { value: 3, label: "3", description: "Quick sanity check" },
+  { value: 50, label: "50", description: "Smoke test" },
   { value: 50000, label: "50K", description: "Fast screening" },
   { value: 100000, label: "100K", description: "Balanced" },
   { value: 200000, label: "200K", description: "Comprehensive" },
@@ -33,7 +35,7 @@ export default function DrugScreening({
   disabled = false,
 }: DrugScreeningProps) {
   const [config, setConfig] = useState<ScreeningConfig>({
-    candidateCount: 50000,
+    candidateCount: 3,
     topN: 10,
     minBindingAffinity: 6.0,
   });
@@ -43,10 +45,74 @@ export default function DrugScreening({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScreeningResult | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [fastaFull, setFastaFull] = useState("");
+  const [fastaPocket, setFastaPocket] = useState("");
+  const [topNInput, setTopNInput] = useState("10");
+  const [minAffinityInput, setMinAffinityInput] = useState("6");
+
+  const extractFastaFromPdb = useCallback((pdb: string) => {
+    const aaMap: Record<string, string> = {
+      ALA: "A",
+      ARG: "R",
+      ASN: "N",
+      ASP: "D",
+      CYS: "C",
+      GLN: "Q",
+      GLU: "E",
+      GLY: "G",
+      HIS: "H",
+      ILE: "I",
+      LEU: "L",
+      LYS: "K",
+      MET: "M",
+      PHE: "F",
+      PRO: "P",
+      SER: "S",
+      THR: "T",
+      TRP: "W",
+      TYR: "Y",
+      VAL: "V",
+      MSE: "M",
+    };
+
+    const lines = pdb.split(/\r?\n/);
+    const chains: Record<string, string[]> = {};
+
+    for (const line of lines) {
+      if (!line.startsWith("SEQRES")) continue;
+      const chain = line.substring(11, 12).trim() || "A";
+      const residues = line
+        .slice(19)
+        .trim()
+        .split(/\s+/)
+        .map((r) => aaMap[r] ?? "")
+        .filter(Boolean);
+      if (!chains[chain]) chains[chain] = [];
+      chains[chain].push(...residues);
+    }
+
+    const chainEntries = Object.entries(chains);
+    if (chainEntries.length === 0) return "";
+
+    // Choose the longest chain sequence
+    const [_, seq] = chainEntries.sort((a, b) => b[1].length - a[1].length)[0];
+    return seq.join("");
+  }, []);
+
+  useEffect(() => {
+    const seq = extractFastaFromPdb(pdbContent);
+    setFastaFull(seq);
+    setFastaPocket("");
+  }, [pdbContent, extractFastaFromPdb]);
 
   const handleStartScreening = useCallback(async () => {
     if (!pdbContent.trim()) {
       setError("Please upload a PDB file first.");
+      return;
+    }
+
+    if (!fastaFull.trim()) {
+      setError("Provide the full protein FASTA sequence.");
       return;
     }
 
@@ -75,7 +141,9 @@ export default function DrugScreening({
       setProgress(30);
 
       // Step 2: Screen drugs against protein
-      setProgressMessage("Running binding affinity predictions...");
+      setProgressMessage(
+        "Running binding affinity predictions (may take time based on selection)..."
+      );
       const screenResponse = await fetch("/api/screen-binding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,6 +152,8 @@ export default function DrugScreening({
           drugs: drugsData.drugs,
           topN: config.topN,
           minBindingAffinity: config.minBindingAffinity,
+          fasta_full: fastaFull,
+          fasta_pocket: fastaPocket,
         }),
       });
 
@@ -104,7 +174,7 @@ export default function DrugScreening({
     } finally {
       setIsScreening(false);
     }
-  }, [pdbContent, config, onScreeningComplete]);
+  }, [pdbContent, config, fastaFull, fastaPocket, onScreeningComplete]);
 
   const hasPdb = pdbContent.trim().length > 0;
 
@@ -148,12 +218,55 @@ export default function DrugScreening({
             className={`text-sm ${
               hasPdb ? "text-emerald-100" : "text-amber-100"
             }`}
-          >
+            >
             {hasPdb
               ? `PDB loaded (${pdbContent.split("\n").length} lines)`
               : "Upload PDB file in left panel to begin screening"}
           </span>
         </div>
+      </div>
+
+      {/* FASTA Display (extracted from PDB) */}
+      <div className="mb-6 space-y-3">
+        <div className="rounded-2xl border border-gray-700/60 bg-black/30 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-300">
+              Protein FASTA (full) <span className="text-amber-300">*</span>
+            </label>
+            <span className="text-xs text-gray-500">Extracted from PDB</span>
+          </div>
+          {fastaFull ? (
+            <div className="bg-black/40 border border-gray-700/60 rounded-xl p-3 text-xs text-gray-200 font-mono whitespace-pre-wrap break-all">
+              {fastaFull}
+            </div>
+          ) : (
+            <div className="text-xs text-amber-300">
+              No SEQRES lines found in the PDB; please provide a PDB with sequence data.
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-gray-700/60 bg-black/30 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-300">
+              Protein FASTA (pocket only)
+            </label>
+            <span className="text-xs text-gray-500">Optional</span>
+          </div>
+          {fastaPocket ? (
+            <div className="bg-black/40 border border-gray-700/60 rounded-xl p-3 text-xs text-gray-200 font-mono whitespace-pre-wrap break-all">
+              {fastaPocket}
+            </div>
+          ) : (
+            <div className="text-xs text-gray-400">
+              No pocket sequence detected. Using full sequence for predictions.
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-gray-500">
+          Sequences are auto-extracted from your PDB and passed with each candidate SMILES from the sorted ZINC CSV.
+        </p>
       </div>
 
       {/* Candidate Count Selection */}
@@ -210,16 +323,27 @@ export default function DrugScreening({
                 Top N Results to Return
               </label>
               <input
-                type="number"
-                min={1}
-                max={100}
-                value={config.topN}
-                onChange={(e) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    topN: Math.max(1, Math.min(100, Number(e.target.value) || 10)),
-                  }))
-                }
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={topNInput}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "");
+                  const normalized = digits.replace(/^0+/, "") || "";
+                  setTopNInput(normalized);
+                  if (normalized) {
+                    const next = Math.max(
+                      1,
+                      Math.min(100, Number(normalized))
+                    );
+                    setConfig((prev) => ({ ...prev, topN: next }));
+                  }
+                }}
+                onBlur={() => {
+                  if (!topNInput) {
+                    setTopNInput(String(config.topN));
+                  }
+                }}
                 disabled={isScreening}
                 className="w-full px-4 py-2 rounded-xl bg-black/30 border border-gray-700/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
               />
@@ -233,20 +357,33 @@ export default function DrugScreening({
                 Minimum Binding Affinity (pKd)
               </label>
               <input
-                type="number"
-                min={0}
-                max={15}
-                step={0.1}
-                value={config.minBindingAffinity}
-                onChange={(e) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    minBindingAffinity: Math.max(
-                      0,
-                      Math.min(15, Number(e.target.value) || 6)
-                    ),
-                  }))
-                }
+                type="text"
+                inputMode="decimal"
+                value={minAffinityInput}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const cleaned = raw.replace(/[^0-9.]/g, "");
+                  const parts = cleaned.split(".");
+                  const normalized =
+                    parts.shift() + (parts.length ? "." + parts.join("") : "");
+                  const trimmed = normalized.replace(/^0+(\d)/, "$1");
+                  setMinAffinityInput(trimmed);
+                  const numeric = Number(trimmed);
+                  if (!Number.isNaN(numeric)) {
+                    setConfig((prev) => ({
+                      ...prev,
+                      minBindingAffinity: Math.max(
+                        0,
+                        Math.min(15, numeric)
+                      ),
+                    }));
+                  }
+                }}
+                onBlur={() => {
+                  if (!minAffinityInput) {
+                    setMinAffinityInput(String(config.minBindingAffinity));
+                  }
+                }}
                 disabled={isScreening}
                 className="w-full px-4 py-2 rounded-xl bg-black/30 border border-gray-700/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
               />

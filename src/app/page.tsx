@@ -54,10 +54,7 @@ export default function Home() {
           <p className="text-xl font-medium text-slate-300 tracking-wide mb-4">
             High-Throughput Drug Screening Platform
           </p>
-          <p className="text-slate-400 max-w-2xl mx-auto">
-            Screen up to 200,000 drug candidates from the ZINC database against your protein structure 
-            to identify compounds with strong predicted binding affinity.
-          </p>
+          <p className="text-slate-400 max-w-2xl mx-auto" />
         </motion.div>
 
         {/* Pipeline Visualization */}

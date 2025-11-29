@@ -1,3 +1,4 @@
+import { Client, type Client as GradioClient } from "@gradio/client";
 import { NextResponse } from "next/server";
 
 interface DrugInput {
@@ -9,6 +10,8 @@ interface DrugInput {
 
 interface ScreeningRequest {
   pdb: string;
+  fasta_full: string;
+  fasta_pocket?: string;
   drugs: DrugInput[];
   topN: number;
   minBindingAffinity: number;
@@ -30,52 +33,63 @@ interface ScreeningResult {
   processingTimeMs: number;
 }
 
-/**
- * Mock binding affinity prediction.
- * Replace this with your actual ML model API call.
- * 
- * The mock uses a deterministic algorithm based on:
- * - QED score (higher = better predicted affinity)
- * - Molecular weight (optimal range 300-500)
- * - logP (optimal range 2-4)
- * - Some randomness seeded by SMILES for consistency
- */
-function predictBindingAffinity(
+const DEFAULT_SPACE_URL = "https://sharanyabasu-affinnity.hf.space";
+const DEFAULT_ENDPOINT = "/predict";
+const MAX_CONCURRENCY = 5;
+
+function buildBaseUrl(): string {
+  return process.env.HF_SPACE_URL?.replace(/\/$/, "") ?? DEFAULT_SPACE_URL;
+}
+
+function buildEndpoint(): string {
+  return process.env.HF_PREDICT_ENDPOINT?.startsWith("/")
+    ? process.env.HF_PREDICT_ENDPOINT
+    : `/${process.env.HF_PREDICT_ENDPOINT ?? DEFAULT_ENDPOINT}`;
+}
+
+let clientPromise: Promise<GradioClient> | null = null;
+
+async function getGradioClient(): Promise<GradioClient> {
+  if (!clientPromise) {
+    clientPromise = Client.connect(buildBaseUrl());
+  }
+  return clientPromise;
+}
+
+async function predictPkD(
   smiles: string,
-  qed: number,
-  mw: number | null,
-  logP: number | null,
-  _pdb: string // Would be used in real implementation
-): number {
-  // Seed pseudo-random from SMILES for consistent results
-  let hash = 0;
-  for (let i = 0; i < smiles.length; i++) {
-    hash = (hash * 31 + smiles.charCodeAt(i)) % 10000;
+  fastaFull: string,
+  fastaPocket: string
+): Promise<number> {
+  const client = await getGradioClient();
+  const endpoint = buildEndpoint();
+
+  try {
+    const result = await client.predict(endpoint, {
+      smiles,
+      fasta_full: fastaFull,
+      fasta_pocket: fastaPocket,
+    });
+
+    const predictedValue = Array.isArray(result.data)
+      ? result.data[0]
+      : (result.data as unknown);
+
+    const predictedPkD =
+      typeof predictedValue === "number"
+        ? predictedValue
+        : Number(predictedValue ?? NaN);
+
+    if (Number.isNaN(predictedPkD)) {
+      throw new Error("Unexpected response from prediction endpoint.");
+    }
+
+    return predictedPkD;
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "HF predict request failed."
+    );
   }
-  const noise = (hash / 10000) * 0.8 - 0.4; // -0.4 to +0.4
-
-  // Base affinity from QED (higher QED = higher affinity)
-  let affinity = 4.0 + qed * 4.5;
-
-  // MW contribution (optimal around 350-450)
-  if (mw !== null) {
-    const mwOptimal = 400;
-    const mwDiff = Math.abs(mw - mwOptimal) / 150;
-    affinity -= Math.min(mwDiff, 1.0) * 0.5;
-  }
-
-  // logP contribution (optimal around 2.5-3.5)
-  if (logP !== null) {
-    const logPOptimal = 3.0;
-    const logPDiff = Math.abs(logP - logPOptimal) / 2;
-    affinity -= Math.min(logPDiff, 1.0) * 0.3;
-  }
-
-  // Add noise for variability
-  affinity += noise;
-
-  // Clamp to reasonable range
-  return Math.max(3.0, Math.min(12.0, affinity));
 }
 
 export async function POST(request: Request) {
@@ -91,6 +105,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!body.fasta_full?.trim()) {
+      return NextResponse.json(
+        { error: "Full protein FASTA is required." },
+        { status: 400 }
+      );
+    }
+
     if (!body.drugs?.length) {
       return NextResponse.json(
         { error: "No drug candidates provided." },
@@ -100,49 +121,60 @@ export async function POST(request: Request) {
 
     const topN = Math.max(1, Math.min(100, body.topN || 10));
     const minAffinity = body.minBindingAffinity ?? 0;
+    const fastaFull = body.fasta_full.trim();
+    const fastaPocket = body.fasta_pocket?.trim() ?? "";
 
-    // Score all drugs
-    const scoredDrugs: Array<{
-      smiles: string;
-      qed: number;
-      mw: number | null;
-      logP: number | null;
-      bindingAffinity: number;
-    }> = [];
+    const results: Array<ScreenedDrug | null> = new Array(body.drugs.length).fill(
+      null
+    );
 
-    for (const drug of body.drugs) {
-      const affinity = predictBindingAffinity(
-        drug.smiles,
-        drug.qed,
-        drug.mw,
-        drug.logP,
-        body.pdb
-      );
+    let index = 0;
+    const workers = Array.from(
+      { length: Math.min(MAX_CONCURRENCY, body.drugs.length) },
+      () => index
+    ).map(async () => {
+      while (true) {
+        const current = index;
+        index += 1;
+        if (current >= body.drugs.length) break;
 
-      scoredDrugs.push({
-        ...drug,
-        bindingAffinity: affinity,
-      });
-    }
+        const drug = body.drugs[current];
 
-    // Filter by minimum affinity
-    const passed = scoredDrugs.filter(
+        try {
+          const pkd = await predictPkD(drug.smiles, fastaFull, fastaPocket);
+
+          results[current] = {
+            rank: current + 1,
+            smiles: drug.smiles,
+            qed: drug.qed,
+            bindingAffinity: Number(pkd.toFixed(2)),
+            mw: drug.mw ?? undefined,
+            logP: drug.logP ?? undefined,
+          };
+        } catch (err) {
+          console.error("Prediction failed for", drug.smiles, err);
+          results[current] = null;
+        }
+      }
+    });
+
+    await Promise.all(workers);
+
+    const completed = results.filter(
+      (item): item is ScreenedDrug => item !== null
+    );
+
+    const passed = completed.filter(
       (d) => d.bindingAffinity >= minAffinity
     );
 
-    // Sort by binding affinity descending
     passed.sort((a, b) => b.bindingAffinity - a.bindingAffinity);
 
-    // Take top N
     const topCandidates: ScreenedDrug[] = passed
       .slice(0, topN)
       .map((drug, idx) => ({
+        ...drug,
         rank: idx + 1,
-        smiles: drug.smiles,
-        qed: drug.qed,
-        bindingAffinity: Number(drug.bindingAffinity.toFixed(2)),
-        mw: drug.mw ?? undefined,
-        logP: drug.logP ?? undefined,
       }));
 
     const result: ScreeningResult = {
