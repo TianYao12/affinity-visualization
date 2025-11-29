@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Database,
   Play,
-  Settings2,
   Loader2,
   CheckCircle,
   AlertCircle,
-  ChevronDown,
   FileText,
   Beaker,
 } from "lucide-react";
@@ -22,9 +20,6 @@ interface DrugScreeningProps {
 }
 
 const CANDIDATE_OPTIONS = [
-  { value: 3, label: "3", description: "Quick sanity check" },
-  { value: 50, label: "50", description: "Smoke test" },
-  { value: 50000, label: "50K", description: "Fast screening" },
   { value: 100000, label: "100K", description: "Balanced" },
   { value: 200000, label: "200K", description: "Comprehensive" },
 ] as const;
@@ -35,8 +30,8 @@ export default function DrugScreening({
   disabled = false,
 }: DrugScreeningProps) {
   const [config, setConfig] = useState<ScreeningConfig>({
-    candidateCount: 3,
-    topN: 10,
+    candidateCount: 1,
+    topN: 1,
     minBindingAffinity: 6.0,
   });
   const [isScreening, setIsScreening] = useState(false);
@@ -44,11 +39,11 @@ export default function DrugScreening({
   const [progressMessage, setProgressMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScreeningResult | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [fastaFull, setFastaFull] = useState("");
   const [fastaPocket, setFastaPocket] = useState("");
-  const [topNInput, setTopNInput] = useState("10");
+  const [topNInput, setTopNInput] = useState("1");
   const [minAffinityInput, setMinAffinityInput] = useState("6");
+  const [customCandidateInput, setCustomCandidateInput] = useState("");
 
   const extractFastaFromPdb = useCallback((pdb: string) => {
     const aaMap: Record<string, string> = {
@@ -292,108 +287,122 @@ export default function DrugScreening({
               <div className="text-xs opacity-80">{option.description}</div>
             </button>
           ))}
+          <div
+            className={`p-3 rounded-xl border transition-all ${
+              CANDIDATE_OPTIONS.some((o) => o.value === config.candidateCount)
+                ? "border-gray-600/50 bg-gray-800/30 text-gray-400"
+                : "border-purple-400/60 bg-purple-500/20 text-purple-100"
+            }`}
+          >
+            <div className="text-sm font-semibold mb-2">Custom</div>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={customCandidateInput}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "");
+                const normalized = digits.replace(/^0+/, "") || "";
+                setCustomCandidateInput(normalized);
+                if (normalized) {
+                  const next = Math.max(
+                    1,
+                    Math.min(227000, Number(normalized))
+                  );
+                  setConfig((prev) => ({ ...prev, candidateCount: next }));
+                }
+              }}
+              onFocus={() => {
+                if (!customCandidateInput) {
+                  setCustomCandidateInput(String(config.candidateCount));
+                }
+              }}
+            onBlur={() => {
+              if (!customCandidateInput) {
+                setCustomCandidateInput(String(config.candidateCount));
+              }
+            }}
+            disabled={isScreening}
+            className="w-full px-3 py-2 rounded-lg bg-black/30 border border-gray-700/60 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40 text-sm"
+            placeholder="Enter count"
+          />
+          <div className="text-[11px] text-gray-400 mt-1">
+            1 to 227,000 candidates
+          </div>
         </div>
       </div>
+      </div>
 
-      {/* Advanced Settings Toggle */}
-      <button
-        onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition mb-4"
-      >
-        <Settings2 className="w-4 h-4" />
-        <span>Advanced Settings</span>
-        <ChevronDown
-          className={`w-4 h-4 transition-transform ${
-            showAdvanced ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+      {/* Advanced Settings (always visible) */}
+      <div className="mb-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Top N Results to Return
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={topNInput}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, "");
+              const normalized = digits.replace(/^0+/, "") || "";
+              setTopNInput(normalized);
+              if (normalized) {
+                const next = Math.max(1, Math.min(100, Number(normalized)));
+                setConfig((prev) => ({ ...prev, topN: next }));
+              }
+            }}
+            onBlur={() => {
+              if (!topNInput) {
+                setTopNInput(String(config.topN));
+              }
+            }}
+            disabled={isScreening}
+            className="w-full px-4 py-2 rounded-xl bg-black/30 border border-gray-700/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Number of top-ranked drug candidates to display (1-100)
+          </p>
+        </div>
 
-      {/* Advanced Settings Panel */}
-      <AnimatePresence>
-        {showAdvanced && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-6 space-y-4 overflow-hidden"
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Top N Results to Return
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={topNInput}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, "");
-                  const normalized = digits.replace(/^0+/, "") || "";
-                  setTopNInput(normalized);
-                  if (normalized) {
-                    const next = Math.max(
-                      1,
-                      Math.min(100, Number(normalized))
-                    );
-                    setConfig((prev) => ({ ...prev, topN: next }));
-                  }
-                }}
-                onBlur={() => {
-                  if (!topNInput) {
-                    setTopNInput(String(config.topN));
-                  }
-                }}
-                disabled={isScreening}
-                className="w-full px-4 py-2 rounded-xl bg-black/30 border border-gray-700/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Number of top-ranked drug candidates to display (1-100)
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Minimum Binding Affinity (pKd)
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={minAffinityInput}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const cleaned = raw.replace(/[^0-9.]/g, "");
-                  const parts = cleaned.split(".");
-                  const normalized =
-                    parts.shift() + (parts.length ? "." + parts.join("") : "");
-                  const trimmed = normalized.replace(/^0+(\d)/, "$1");
-                  setMinAffinityInput(trimmed);
-                  const numeric = Number(trimmed);
-                  if (!Number.isNaN(numeric)) {
-                    setConfig((prev) => ({
-                      ...prev,
-                      minBindingAffinity: Math.max(
-                        0,
-                        Math.min(15, numeric)
-                      ),
-                    }));
-                  }
-                }}
-                onBlur={() => {
-                  if (!minAffinityInput) {
-                    setMinAffinityInput(String(config.minBindingAffinity));
-                  }
-                }}
-                disabled={isScreening}
-                className="w-full px-4 py-2 rounded-xl bg-black/30 border border-gray-700/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Only show candidates with pKd ≥ this threshold (0-15)
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Minimum Binding Affinity (pKd)
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={minAffinityInput}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const cleaned = raw.replace(/[^0-9.]/g, "");
+              const parts = cleaned.split(".");
+              const normalized =
+                parts.shift() + (parts.length ? "." + parts.join("") : "");
+              const trimmed = normalized.replace(/^0+(\d)/, "$1");
+              setMinAffinityInput(trimmed);
+              const numeric = Number(trimmed);
+              if (!Number.isNaN(numeric)) {
+                setConfig((prev) => ({
+                  ...prev,
+                  minBindingAffinity: Math.max(0, Math.min(15, numeric)),
+                }));
+              }
+            }}
+            onBlur={() => {
+              if (!minAffinityInput) {
+                setMinAffinityInput(String(config.minBindingAffinity));
+              }
+            }}
+            disabled={isScreening}
+            className="w-full px-4 py-2 rounded-xl bg-black/30 border border-gray-700/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Only show candidates with pKd ≥ this threshold (0-15)
+          </p>
+        </div>
+      </div>
 
       {/* Progress Bar */}
       {isScreening && (
@@ -459,6 +468,14 @@ export default function DrugScreening({
           animate={{ opacity: 1, y: 0 }}
           className="mt-6 border-t border-gray-700/50 pt-6"
         >
+          {result.topRationale && (
+            <div className="mb-5 rounded-xl border border-emerald-400/40 bg-emerald-500/10 p-4 text-sm text-emerald-50">
+              <div className="text-xs uppercase tracking-wide text-emerald-200 mb-1">
+                Why the top ligand binds well (model rationale)
+              </div>
+              <p className="leading-relaxed">{result.topRationale}</p>
+            </div>
+          )}
           {/* Summary Stats */}
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-slate-800/40 rounded-xl p-3 text-center">

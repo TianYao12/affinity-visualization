@@ -11,7 +11,7 @@ export interface DrugCandidate {
 }
 
 export interface ScreeningConfig {
-  candidateCount: 3 | 50 | 50000 | 100000 | 200000;
+  candidateCount: number;
   topN: number;
   minBindingAffinity: number;
 }
@@ -26,6 +26,7 @@ export interface ScreeningResult {
   totalScreened: number;
   passedThreshold: number;
   processingTimeMs: number;
+  topRationale?: string | null;
 }
 
 export interface PDBData {

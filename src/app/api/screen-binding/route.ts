@@ -31,6 +31,7 @@ interface ScreeningResult {
   passedThreshold: number;
   topCandidates: ScreenedDrug[];
   processingTimeMs: number;
+  topRationale?: string | null;
 }
 
 const DEFAULT_SPACE_URL = "https://sharanyabasu-affinnity.hf.space";
@@ -89,6 +90,64 @@ async function predictPkD(
     throw new Error(
       error instanceof Error ? error.message : "HF predict request failed."
     );
+  }
+}
+
+async function generateRationale(params: {
+  topDrug: ScreenedDrug;
+  fastaFull: string;
+  fastaPocket: string;
+}): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const { topDrug, fastaFull, fastaPocket } = params;
+
+  const prompt = [
+    "You are a computational chemist explaining why a ligand has high predicted binding affinity to a protein.",
+    `Ligand SMILES: ${topDrug.smiles}`,
+    `Predicted pKd: ${topDrug.bindingAffinity}`,
+    `Protein FASTA (full): ${fastaFull}`,
+    `Protein FASTA (pocket): ${fastaPocket || "N/A"}`,
+    "",
+    "Refer explicitly to the ligand by its SMILES (do not just say 'the ligand').",
+    "Explain key interaction drivers (e.g., hydrogen bonds, hydrophobic contacts, aromatic stacking, charge interactions, flexibility/rotatable bonds).",
+    "Respond concisely in a maximum of 5 sentences and avoid speculation about experimental data.",
+  ].join("\n");
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "Provide concise mechanistic reasoning for binding affinity." },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 250,
+        temperature: 0.4,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("OpenAI rationale error:", await response.text());
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const content = data.choices?.[0]?.message?.content?.trim();
+    return content || null;
+  } catch (err) {
+    console.error("OpenAI rationale exception:", err);
+    return null;
   }
 }
 
@@ -177,11 +236,21 @@ export async function POST(request: Request) {
         rank: idx + 1,
       }));
 
+    let topRationale: string | null = null;
+    if (topCandidates.length > 0) {
+      topRationale = await generateRationale({
+        topDrug: topCandidates[0],
+        fastaFull,
+        fastaPocket,
+      });
+    }
+
     const result: ScreeningResult = {
       totalScreened: body.drugs.length,
       passedThreshold: passed.length,
       topCandidates,
       processingTimeMs: Date.now() - startTime,
+      topRationale,
     };
 
     return NextResponse.json(result);
