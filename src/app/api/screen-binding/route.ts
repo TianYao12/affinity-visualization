@@ -85,7 +85,8 @@ async function predictPkD(
       throw new Error("Unexpected response from prediction endpoint.");
     }
 
-    return predictedPkD;
+    // Shift from model's [-2,3] normalized range into ~[0,12] by adding 7
+    return predictedPkD + 7;
   } catch (error) {
     throw new Error(
       error instanceof Error ? error.message : "HF predict request failed."
